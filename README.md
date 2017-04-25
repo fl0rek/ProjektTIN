@@ -1,4 +1,4 @@
-# ProjektTIN
+# ProjektTIN [![Build Status](https://travis-ci.org/izaya0/ProjektTIN.svg?branch=master)](https://travis-ci.org/izaya0/ProjektTIN)
 Projekt na przedmiot TIN realizowany w 4 osobowym zespole.
 
 Treść zadania:
