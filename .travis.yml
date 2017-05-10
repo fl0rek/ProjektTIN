@@ -1,12 +1,28 @@
 language: cpp
 
-before_script:
-        - mkdir build
-        - cd build
-        - cmake ..
+env:
+        - COMPONENT=libnet
+before_install:
+        #C++14
+        - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+        - sudo apt-get update -qq
 
-script: make
+install:
+        - sudo apt-get install -qq g++-6
+        - sudo update-aplternatives --install /usr/bin/g++ g++ /usr/bin/g++-5 90
+        - sudo unlink /usr/bin/gcc && sudo ln -s /usr/bin/gcc-5 /usr/bin/gcc
+        - sudo unlink /usr/bin/g++ && sudo ln -s /usr/bin/g++-5 /usr/bin/g++
+
+
+before_script:
+        - if [[ "$COMPONENT" = "libnet" ]] ; then mkdir libnet/build ; cd libnet/build ; cmake .. ; fi
+
+script: if [[ ! -z "$COMPONENT" ]] ; then make ; fi
+
+dist: trusty
 
 compiler:
         - clang++
         - g++
+git:
+        depth: 3
