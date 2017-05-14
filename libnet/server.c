@@ -37,8 +37,51 @@
 #define STATE_DISCONNECTED 3
 #define STATE_ERROR 4
 
+#ifdef _DEBUG
+char state_none_[] = "none";
+char state_connecting_[] = "connecting";
+char state_ready_[] = "ready";
+char state_disconnected_[] = "disconnected";
+char state_error_[] = "error";
+char state_unknown_[] = "unknown";
+
+char const * state_to_string(int status) {
+	switch(status) {
+		case STATE_NONE:
+			return state_none_;
+		case STATE_CONNECTING:
+			return state_connecting_;
+		case STATE_READY:
+			return state_ready_;
+		case STATE_DISCONNECTED:
+			return state_disconnected_;
+		case STATE_ERROR:
+			return state_error_;
+		default:
+			return state_unknown_;
+	}
+}
+#endif
+
 #define READ_STATUS_DEFAULT 0
 #define READ_STATUS_WAITING_FOR_DATA 1
+
+#ifdef _DEBUG
+char status_default_[] = "default";
+char status_waiting_[] = "waiting for data";
+char status_unknown_[] = "unknown";
+
+char const * read_status_to_string(int status) {
+	switch(status) {
+		case READ_STATUS_DEFAULT:
+			return status_default_;
+		case READ_STATUS_WAITING_FOR_DATA:
+			return status_waiting_;
+		default:
+			return status_unknown_;
+	}
+}
+#endif
 
 #define CLIENT_MAX_RETRIES 30
 
@@ -62,11 +105,9 @@ typedef struct {
 
 tlv *message_queue[MAX_MESSAGE_QUEUE];
 sem_t free_message_slots;
-//size_t enqueued_messages = 0;
 
 #define MAX_CLIENT_NUMBER 100
 client_info clients[MAX_CLIENT_NUMBER];
-client_info *clients_end = clients;
 
 typedef struct {
 	unsigned char tag;
@@ -77,14 +118,6 @@ available_tag_t *available_tags;
 size_t available_tags_number;
 
 fd_set sockets;
-
-/*
-static void signal_callback_handle(int signum, siginfo_t *siginfo, void *context) {
-	UNUSED(context);
-	log_info("Caught SIGPIPE %d from PID: %ld, UID %ld",
-			signum, (long)siginfo->si_pid, (long)siginfo->si_uid);
-}
-*/
 
 bool libnet_init(unsigned char *tags_to_register, unsigned tags_to_register_number) {
 	available_tags = malloc(tags_to_register_number * sizeof * available_tags);
@@ -144,9 +177,9 @@ static client_info* get_client_by_id(unsigned id) {
 
 static client_info* add_client(int fd) {
 	client_info *client;
-	for(client = clients; client < clients_end && client->state != STATE_NONE; client++);
+	for(client = clients; client < clients + MAX_CLIENT_NUMBER && client->state != STATE_NONE; client++);
 
-	check1(!(client < clients_end), "No free client slots");
+	check1(!(client < clients + MAX_CLIENT_NUMBER), "No free client slots");
 
 	log_info("Adding client no %u", (unsigned)(clients - client));
 
@@ -251,10 +284,16 @@ static bool try_read_header(client_info *client, unsigned char *buff) {
 
 
 
-static void handle_echo_message(client_info *client, tlv *message) {
+static void handle_echo_message(client_info *client, tlv *message, bool reply) {
 	UNUSED(message);
 	debug1("Handle echo");
 	client->retries = CLIENT_MAX_RETRIES;
+	if(reply) {
+		check1(send_tag(client, TAG_OK, 0, 0), "Echo response");
+	}
+
+error:
+	return ;
 }
 
 static void handle_helo_message(client_info *client, tlv *message) {
@@ -273,7 +312,9 @@ error:
 }
 
 static void handle_bye_message(client_info *client, tlv *message) {
-	// TODO(florek) add graceful disconnect
+	if(client->state == STATE_DISCONNECTED)
+		return;
+	client_disconnect(client);
 
 }
 
@@ -281,8 +322,10 @@ static bool handle_internal_message(client_info *client, tlv *message) {
 	debug1("Detected internal message");
 	switch(message->tag) {
 		case TAG_ECHO:
+			handle_echo_message(client, message, true);
+			break;
 		case TAG_OK:
-			handle_echo_message(client, message);
+			handle_echo_message(client, message, false);
 			break;
 		case TAG_HELO:
 			handle_helo_message(client, message);
@@ -304,6 +347,18 @@ static bool notify_tag(unsigned char tag) {
 		return false;
 	}
 	check(!sem_post(&tag_sem->number), "sem_post tag %x", tag);
+	return true;
+error:
+	return false;
+}
+
+static bool wait_for_tag(unsigned char tag) {
+	available_tag_t *tag_sem = get_available_tags_struct(tag);
+	if(!tag_sem) {
+		log_warn("Message with unknown tag %x ignoring", tag);
+		return false;
+	}
+	check(!sem_wait(&tag_sem->number), "sem_wait tag %x", tag);
 	return true;
 error:
 	return false;
@@ -577,6 +632,54 @@ error:
 	return false;
 }
 
+#ifdef _DEBUG
+void libnet_debug_dump_client_info() {
+	for(unsigned i = 0; i < MAX_CLIENT_NUMBER; i++) {
+		client_info *c = clients[i];
+		debug("%d %s %s %d", c->fd, state_to_string(c->state), read_status_to_string(c->read_status), c->retries);
+	}
+}
+#endif
+
+bool libnet_send(unsigned char tag, size_t length, unsigned char *value) {
+	bool success = true;
+
+	for(unsigned i = 0; i < MAX_CLIENT_NUMBER; i++) {
+		client_info *c = clients + i;
+
+		success &= send_tag(c, tag, length, value);
+	}
+
+	return success;
+}
+
+size_t libnet_wait_for_tag(unsigned char tag, char *buffer, size_t length) {
+	int error = ENOTAG;
+	check1(wait_for_tag(tag), "libnet_wait_for_tag wait_for_tag");
+
+	unsigned tag_message;
+	for(tag_message = 0; tag_message < MAX_MESSAGE_QUEUE &&
+		message_queue[tag_message] && message_queue[tag_message]->tag != tag;
+		tag_message++);
+
+	error = EQUEUE;
+	check1(message_queue[tag_message]->tag == tag, "Message queue inconsistent");
+
+	tlv* msg = message_queue[tag_message];
+	message_queue = 0;
+
+	error = ESIZE;
+	check1(msg->length <= length, "Buffer too small");
+
+	memcpy(buffer, msg->value, msg->length);
+
+	size_t message_length = msg->length;
+	free(msg);
+
+	return message_length;
+error:
+	return -error;;
+}
 
 int main(int argc, char *argv[]) {
 
