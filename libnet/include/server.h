@@ -2,6 +2,7 @@
 
 #include <stdbool.h>
 #include <stdlib.h>
+#include <sys/types.h>
 
 /**
  * @brief
@@ -39,7 +40,7 @@ bool libnet_send(unsigned char tag, size_t length, unsigned char *value) __attri
  * @param length
  * 	provided buffer length
  */
-size_t libnet_wait_for_tag(unsigned char tag, char *buffer, size_t length) __attribute__((warn_unused_result));
+ssize_t libnet_wait_for_tag(unsigned char tag, char *buffer, size_t length) __attribute__((warn_unused_result));
 
 /**
  * @brief
