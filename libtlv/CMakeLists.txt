@@ -6,8 +6,8 @@ file(GLOB SOURCES "src/*.cpp")
 add_compile_options(-std=c++14)
 find_package(Boost COMPONENTS unit_test_framework REQUIRED)
 
-add_executable(TlvObjectTests ${SOURCES})
+add_executable(TlvTests ${SOURCES})
 
 enable_testing()
-target_link_libraries(TlvObjectTests ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
-add_test(TlvTests TlvObjectTests)
+target_link_libraries(TlvTests ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY})
+add_test(TlvTests TlvTests)
