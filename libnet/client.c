@@ -15,10 +15,12 @@
 client_info server[1];
 
 inline unsigned get_client_id(client_info *client) {
+	UNUSED(client);
 	return 0;
 }
 
 client_info* get_client_by_fd(int fd) {
+	UNUSED(fd);
 	return server;
 }
 
@@ -75,7 +77,6 @@ static int libnet_client_main(const char *address, const char* service) {
 		while(!exiting)
 			handle_client_input(sockfd);
 
-		//TODO shit
 		close(sockfd);
 	} while (!(res = res->ai_next));
 
@@ -127,6 +128,8 @@ char addr[] = "localhost";
 char serv[] = "4200";
 
 int main(int argc, char **argv) {
+	UNUSED(argc);
+	UNUSED(argv);
 	log_info1("Starting client thread");
 	libnet_thread_start(addr, serv);
 	getchar();

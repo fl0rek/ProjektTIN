@@ -13,20 +13,18 @@ typedef struct {
 	unsigned char internal_buffer[HEADER_LEN]; // used to store partially retreived data
 } client_info;
 
+
 typedef struct {
 	unsigned char tag;
 	sem_t number;
 } available_tag_t;
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic warning "-pedantic"
 #pragma message "This is not strictly C99 but works and is awfully convenient"
 typedef struct {
 	unsigned char tag;
 	size_t length;
 	unsigned char value[0]; // variable size array at the tail of struct
 } tlv;
-#pragma GCC diagnostic pop
 
 // as per https://lists.gnu.org/archive/html/bug-gnulib/2006-06/msg00014.html
 #ifndef SSIZE_MAX

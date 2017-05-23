@@ -197,7 +197,7 @@ bool send_tag(client_info const * client, unsigned char tag,
 	unsigned char * buff = malloc(HEADER_LEN + length);
 	buff[0] = tag;
 	buff[1] = (unsigned char) length;
-	memcpy(buff +HEADER_LEN, value, length);
+	memcpy(buff + HEADER_LEN, value, length);
 
 	size_t total_length = length + HEADER_LEN;
 	size_t offset = 0;
