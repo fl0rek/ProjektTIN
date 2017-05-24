@@ -39,7 +39,7 @@ static client_info* add_client(int fd) {
 	client_info *client;
 	for(client = clients; client < clients + MAX_CLIENT_NUMBER && client->state != STATE_NONE; client++);
 
-	check1(!(client < clients + MAX_CLIENT_NUMBER), "No free client slots");
+	check1((client < clients + MAX_CLIENT_NUMBER), "No free client slots");
 
 	log_info("Adding client no %u", (unsigned)(clients - client));
 
@@ -56,8 +56,13 @@ error:
 static int initialize_server(int port, int connections, char* address) {
 	debug1("initalize_server");
 
+	for(client_info *client = clients; client < clients + MAX_CLIENT_NUMBER; client++) {
+		client->state = STATE_NONE;
+	}
+
 	struct sockaddr_in6 socket_struct;
 	int sock_fd = -1;
+
 
 	check1((sock_fd = socket(AF_INET6, SOCK_STREAM, 0)) >= 0,
 		"socket");
@@ -117,14 +122,14 @@ static int handle_client_init(int sock_fd) {
 	inet_ntop(AF_INET6, &(client_struct.sin6_addr), client_addr_ipv6, sizeof client_addr_ipv6);
 	log_info("Connection from %s", client_addr_ipv6);
 
-	add_client(fd);
+	check1(add_client(fd), "Add client");
 
 	return fd;
 error:
 	if(fd > 0 && close(fd)) {
 		log_err1("error closing socket");
 	}
-	exit(EXIT_FAILURE);
+	//exit(EXIT_FAILURE);
 }
 
 inline unsigned get_client_id(client_info *client) {
@@ -251,41 +256,6 @@ bool libnet_send(unsigned char tag, size_t length, unsigned char *value) {
 	}
 
 	return success;
-}
-
-ssize_t libnet_wait_for_tag(unsigned char tag, char *buffer, size_t length) {
-	int error = ENOTAG;
-	check1(wait_for_tag(tag), "libnet_wait_for_tag wait_for_tag");
-
-	tlv** message_queue = get_message_queue();
-
-	unsigned tag_message;
-	for(tag_message = 0; tag_message < MAX_MESSAGE_QUEUE &&
-		message_queue[tag_message] && message_queue[tag_message]->tag != tag;
-		tag_message++);
-
-	error = EQUEUE;
-	check1(message_queue[tag_message]->tag == tag, "Message queue inconsistent");
-
-	tlv* msg = message_queue[tag_message];
-	message_queue[tag_message] = 0;
-
-	error = ESIZE;
-	check1(msg->length <= length, "Buffer too small");
-
-	memcpy(buffer, msg->value, msg->length);
-
-	ssize_t message_length;
-	if(msg->length < SSIZE_MAX) {
-		message_length = (ssize_t) msg->length;
-	} else {
-		log_err1("Message longer than SSIZE_MAX");
-	}
-	free(msg);
-
-	return message_length;
-error:
-	return -error;
 }
 
 int main(int argc, char *argv[]) {

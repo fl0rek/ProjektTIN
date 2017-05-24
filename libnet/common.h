@@ -51,6 +51,10 @@ typedef struct {
 # define MAX_MESSAGE_QUEUE 100
 #endif
 
+#define ENOTAG 1 // specified tag has not been registered
+#define EQUEUE 2 // queue in inconsistent state (something is very wrong)
+#define ESIZE  3 // provided buffer too small
+
 tlv** get_message_queue();
 
 bool handle_message(client_info *client, tlv *message) __attribute__((warn_unused_result));

@@ -61,21 +61,47 @@ static int libnet_client_main(const char *address, const char* service) {
 	int selfpipe_fd;
 	check1((selfpipe_fd = create_selfpipe(&selfpipe_write_end, 0)), "selfpipe init");
 	do {
-		int sockfd;
-		if((sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol) < 0)) {
+		int sockfd = -1;
+		if((sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) < 0) {
 			continue;
 		}
 		add_fd_to_select(selfpipe_fd);
 		add_fd_to_select(sockfd);
 
-		if(!connect(sockfd, res->ai_addr, res->ai_addrlen)) {
+		if(connect(sockfd, res->ai_addr, res->ai_addrlen)) {
 			log_err1("connect");
 			close_socket(sockfd);
 			continue;
 		}
 
-		while(!exiting)
-			handle_client_input(sockfd);
+		server->fd = sockfd;
+		server->state = STATE_CONNECTING;
+		server->read_status = READ_STATUS_DEFAULT;
+		server->retries = 0;
+
+		send_tag(server, TAG_HELO, 0, 0);
+
+		while(!exiting) {
+			log_info("Waiting for server or selfpipie");
+			send_tag(server, 0xee, 3, "foo");
+			check1(select(nfds, &selects, 0, 0, 0) >= 0, "select");
+			for(int i = 0; i < nfds; i++) {
+				if(FD_ISSET(i, &selects)) {
+					log_info("Action on fd %d", i);
+					if(i == server->fd) {
+						handle_client_input(server->fd);
+					} else {
+						log_info1("Got interrupted by selfpipe");
+						continue; // probably selfpipe
+					}
+				}
+			}
+
+			if(server->state == STATE_NONE) {
+				exiting = true;
+				log_warn1("Lost connection to server, exiting");
+			}
+		}
 
 		close(sockfd);
 	} while (!(res = res->ai_next));
@@ -86,6 +112,10 @@ error:
 		freeaddrinfo(res_head);
 
 	return 0;
+}
+
+bool libnet_send(unsigned char tag, size_t length, unsigned char *value) {
+	return send_tag(server, tag, length, value);
 }
 
 static void* libnet_main_pthread_wrapper(void * args) {
