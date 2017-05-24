@@ -65,6 +65,41 @@ error:
 	return false;
 }
 
+ssize_t libnet_wait_for_tag(unsigned char tag, char *buffer, size_t length) {
+	int error = ENOTAG;
+	check1(wait_for_tag(tag), "libnet_wait_for_tag wait_for_tag");
+
+	tlv** message_queue = get_message_queue();
+
+	unsigned tag_message;
+	for(tag_message = 0; tag_message < MAX_MESSAGE_QUEUE &&
+		message_queue[tag_message] && message_queue[tag_message]->tag != tag;
+		tag_message++);
+
+	error = EQUEUE;
+	check1(message_queue[tag_message]->tag == tag, "Message queue inconsistent");
+
+	tlv* msg = message_queue[tag_message];
+	message_queue[tag_message] = 0;
+
+	error = ESIZE;
+	check1(msg->length <= length, "Buffer too small");
+
+	memcpy(buffer, msg->value, msg->length);
+
+	ssize_t message_length;
+	if(msg->length < SSIZE_MAX) {
+		message_length = (ssize_t) msg->length;
+	} else {
+		log_err1("Message longer than SSIZE_MAX");
+	}
+	free(msg);
+
+	return message_length;
+error:
+	return -error;
+}
+
 
 bool enqueue_message(tlv *message) {
 	check1(sem_wait(&free_message_slots), "wait free_message_slots");
@@ -104,8 +139,6 @@ static void client_disconnect(client_info *client) {
 	check_warn1(send_tag(client, TAG_BYE, 0, 0), "send bye");
 	unsigned client_id = get_client_id(client);
 
-	//check(!shutdown(client->fd, SHUT_RDWR), "shutdown client %u", client_id);
-	//check(!close(client->fd), "close client %u", client_id);
 	if(!close_socket(client->fd)) {
 		if(errno == ENOTCONN) {
 		} else {
@@ -143,6 +176,7 @@ error:
 }
 
 static void handle_bye_message(client_info *client, tlv *message) {
+	UNUSED(message);
 	if(client->state == STATE_DISCONNECTED)
 		return;
 	client_disconnect(client);
@@ -164,7 +198,8 @@ static bool handle_internal_message(client_info *client, tlv *message) {
 			handle_bye_message(client, message);
 			break;
 		default:
-			log_warn("Unexpected message with tag %x", message->tag);
+			log_warn("Unexpected message with tag %x and length %d",
+					message->tag, message->length);
 			return false;
 	}
 	return true;
@@ -194,6 +229,7 @@ bool handle_message(client_info *client, tlv *message) {
 
 bool send_tag(client_info const * client, unsigned char tag,
 		size_t length, unsigned char * value) {
+	debug("Sending tag %x", tag);
 	unsigned char * buff = malloc(HEADER_LEN + length);
 	buff[0] = tag;
 	buff[1] = (unsigned char) length;
