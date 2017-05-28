@@ -216,7 +216,7 @@ static int setup_signal_handler() {
 }
 */
 
-bool libnet_thread_start(char *address) {
+bool libnet_thread_start(const char *address) {
 	//check1(setup_signal_handler() == 0, "Signal handler setup");
 	//TODO(florek) better error handling?
 	check1(!pthread_create(&libnet_thread, 0, libnet_main_pthread_wrapper, &address),
@@ -226,7 +226,7 @@ error:
 	return false;
 }
 
-static bool libnet_thread_shutdown() {
+bool libnet_thread_shutdown() {
 	exiting = true;
 	check1(notify_selfpipe(selfpipe_write_end) >= 0, "selfpipe write");
 	//TODO(florek) error handling
@@ -246,7 +246,8 @@ void libnet_debug_dump_client_info() {
 }
 #endif
 
-bool libnet_send(unsigned char tag, size_t length, unsigned char *value) {
+bool libnet_send(const unsigned char tag, const size_t length,
+		const unsigned char *value) {
 	bool success = true;
 
 	for(unsigned i = 0; i < MAX_CLIENT_NUMBER; i++) {
@@ -257,6 +258,8 @@ bool libnet_send(unsigned char tag, size_t length, unsigned char *value) {
 
 	return success;
 }
+
+#ifdef BUILD_SAMPLE_EXECUTABLE
 
 int main(int argc, char *argv[]) {
 
@@ -269,4 +272,4 @@ int main(int argc, char *argv[]) {
 	return 0;
 }
 
-
+#endif

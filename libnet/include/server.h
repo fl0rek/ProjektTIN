@@ -12,7 +12,9 @@
  * @param tags_to_register_number
  * 	number of tags in table
  */
-bool libnet_init(unsigned char *tags_to_register, unsigned tags_to_register_number) __attribute__((warn_unused_result));
+bool libnet_init(const unsigned char *tags_to_register,
+		const unsigned tags_to_register_number)
+	__attribute__((warn_unused_result));
 
 // TODO(florek) better error handling
 /**
@@ -25,14 +27,17 @@ bool libnet_init(unsigned char *tags_to_register, unsigned tags_to_register_numb
  * @param value
  * 	message data
  */
-bool libnet_send(unsigned char tag, size_t length, unsigned char *value) __attribute__((warn_unused_result));
+bool libnet_send(const unsigned char tag, const size_t length,
+		const unsigned char *value)
+	__attribute__((warn_unused_result));
 
 #define ENOTAG 1 // specified tag has not been registered
 #define EQUEUE 2 // queue in inconsistent state (something is very wrong)
 #define ESIZE  3 // provided buffer too small
 /**
  * @brief
- * 	return message with specified tag, may block if no such message in recv queue
+ * 	return message with specified tag, may block if no such message
+ * 	in recv queue
  * @param tag
  * 	wait for message with specified tag
  * @param buffer
@@ -40,20 +45,21 @@ bool libnet_send(unsigned char tag, size_t length, unsigned char *value) __attri
  * @param length
  * 	provided buffer length
  */
-ssize_t libnet_wait_for_tag(unsigned char tag, char *buffer, size_t length) __attribute__((warn_unused_result));
+ssize_t libnet_wait_for_tag(const unsigned char tag, unsigned char *buffer,
+		size_t length) __attribute__((warn_unused_result));
 
 /**
  * @brief
  * 	start libnet thread. must be called after init, before any other actions
  */
-bool libnet_thread_start();
+bool libnet_thread_start(const char *address);
 
 /**
  * @brief
  * 	stop libnet thread
  * // messages in queue are left in unspecified state for now -- florek
  */
-bool libnet_shutdown();
+bool libnet_thread_shutdown();
 
 #ifdef _DEBUG
 /**

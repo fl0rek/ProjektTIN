@@ -57,10 +57,11 @@ typedef struct {
 
 tlv** get_message_queue();
 
-bool handle_message(client_info *client, tlv *message) __attribute__((warn_unused_result));
+bool handle_message(client_info *client, tlv *message)
+	__attribute__((warn_unused_result));
 
-bool send_tag(client_info const * client, unsigned char tag,
-		size_t length, unsigned char * value)
+bool send_tag(client_info const * client, const unsigned char tag,
+		const size_t length, const unsigned char * value)
 	__attribute__((warn_unused_result));
 
 //bool handle_internal_message(client_info *client, tlv *message);
@@ -81,8 +82,9 @@ int notify_selfpipe(int selfpipe_write_end);
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic warning "-Wredundant-decls"
-#pragma message "Yeah I know"
-bool libnet_init(unsigned char *tags_to_register, unsigned tags_to_register_number);
+bool libnet_init(const unsigned char *tags_to_register,
+		const unsigned tags_to_register_number)
+	__attribute__((warn_unused_result));
 #pragma GCC diagnostic pop
 
 #ifdef _DEBUG

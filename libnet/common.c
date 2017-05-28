@@ -39,7 +39,8 @@ available_tag_t* get_available_tags_struct(unsigned char tag) {
 	return 0;
 }
 
-bool libnet_init(unsigned char *tags_to_register, unsigned tags_to_register_number) {
+bool libnet_init(const unsigned char *tags_to_register,
+		const unsigned tags_to_register_number) {
 	available_tags = malloc(tags_to_register_number * sizeof * available_tags);
 	check_mem(available_tags);
 
@@ -65,6 +66,7 @@ error:
 	return false;
 }
 
+ssize_t libnet_wait_for_tag(unsigned char tag, char *buffer, size_t length);
 ssize_t libnet_wait_for_tag(unsigned char tag, char *buffer, size_t length) {
 	int error = ENOTAG;
 	check1(wait_for_tag(tag), "libnet_wait_for_tag wait_for_tag");
@@ -198,7 +200,7 @@ static bool handle_internal_message(client_info *client, tlv *message) {
 			handle_bye_message(client, message);
 			break;
 		default:
-			log_warn("Unexpected message with tag %x and length %d",
+			log_warn("Unexpected message with tag %x and length %lu",
 					message->tag, message->length);
 			return false;
 	}
@@ -227,8 +229,8 @@ bool handle_message(client_info *client, tlv *message) {
 			notify_tag(message->tag);
 }
 
-bool send_tag(client_info const * client, unsigned char tag,
-		size_t length, unsigned char * value) {
+bool send_tag(client_info const * client, const unsigned char tag,
+		const size_t length, const unsigned char * value) {
 	debug("Sending tag %x", tag);
 	unsigned char * buff = malloc(HEADER_LEN + length);
 	buff[0] = tag;

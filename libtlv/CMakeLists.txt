@@ -1,10 +1,12 @@
-cmake_minimum_required(VERSION 3.0)
-project (libtlv)
+cmake_minimum_required(VERSION 3.1)
+
 include_directories(include)
 file(GLOB SOURCES "src/*.cpp")
 
 add_compile_options(-std=c++14)
 find_package(Boost COMPONENTS unit_test_framework REQUIRED)
+
+add_library(tlv STATIC src/Tlv.cpp)
 
 add_executable(TlvTests ${SOURCES})
 
