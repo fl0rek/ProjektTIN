@@ -4,9 +4,11 @@
 #include <vector>
 #include <memory>
 /*
+
 project libtlv from MASM
 author Michal Citko
 date 24.05.2017
+
 
 tlv buffer consists of a header and data. Header has tag, flag that tells if there are tags in data and data size.
 Use example, you create Tlv object with default constructor, serialize classes and add them to Tlv object with
@@ -81,6 +83,7 @@ class Tlv {
 		*/
 		static const unsigned int getTag(const unsigned char a, const unsigned char b, 
 				const unsigned char c, const unsigned char d);
+
 	private:
 		/**
 		 * structure representing node of Tlv Object
