@@ -51,7 +51,7 @@ bool libnet_send(const unsigned char tag, const size_t length,
  * @param length
  * 	provided buffer length
  */
-ssize_t libnet_wait_for_tag(const unsigned char tag, char *buffer,
+ssize_t libnet_wait_for_tag(const unsigned char tag, unsigned char *buffer,
 		size_t length) __attribute__((warn_unused_result));
 
 /**
@@ -60,3 +60,9 @@ ssize_t libnet_wait_for_tag(const unsigned char tag, char *buffer,
  * // messages in queue are left in unspecified state for now -- florek
  */
 bool libnet_thread_shutdown();
+
+/**
+ * @brief
+ * 	block until any new message becomes available
+ */
+bool libnet_wait_for_new_message();

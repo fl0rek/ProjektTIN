@@ -73,7 +73,7 @@ bool close_socket(int fd);
 
 int handle_client_input(int sock_fd);
 
-bool wait_for_tag(unsigned char tag);
+//bool wait_for_tag(unsigned char tag);
 
 bool enqueue_message(tlv *message);
 

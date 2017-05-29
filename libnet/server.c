@@ -158,13 +158,16 @@ void clear_fd_select(int fd) {
 
 int selfpipe_write_end;
 bool exiting = false;
-static int libnet_main(char *address) {
+static int libnet_main(const char *address) {
 	FD_ZERO(&sockets);
+	int port = 4200;
 
-	int master_socket_fd = initialize_server(4200, 1, address);
+	int master_socket_fd = initialize_server(port, 1, address);
 
 	int selfpipe_fd;
 	check1((selfpipe_fd = create_selfpipe(&selfpipe_write_end, 0)), "selfpipe init");
+
+	log_info("listening on %s:%d", address, port);
 
 	while(!exiting) {
 		add_fd_to_select(selfpipe_fd);
@@ -206,20 +209,12 @@ static void* libnet_main_pthread_wrapper(void * args) {
 
 pthread_t libnet_thread;
 
-/*
-static int setup_signal_handler() {
-	struct sigaction sa;
-	sa.sa_handler = SIG_IGN;
-	sa.sa_flags = 0;
-
-	return sigaction(SIGPIPE, &sa, 0);
-}
-*/
-
 bool libnet_thread_start(const char *address) {
-	//check1(setup_signal_handler() == 0, "Signal handler setup");
 	//TODO(florek) better error handling?
-	check1(!pthread_create(&libnet_thread, 0, libnet_main_pthread_wrapper, &address),
+	const char **params = malloc(sizeof * address);
+	check_mem(params);
+	*params = address;
+	check1(!pthread_create(&libnet_thread, 0, libnet_main_pthread_wrapper, params),
 			"pthread_create libnet_thread");
 	return true;
 error:
