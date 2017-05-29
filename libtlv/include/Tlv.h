@@ -4,7 +4,9 @@
 #include <vector>
 #include <memory>
 /*
+project libtlv from MASM
 author Michal Citko
+date 24.05.2017
 
 tlv buffer consists of a header and data. Header has tag, flag that tells if there are tags in data and data size.
 Use example, you create Tlv object with default constructor, serialize classes and add them to Tlv object with
@@ -62,6 +64,23 @@ class Tlv {
 		 *		vector with header + data of every element
 		*/
 		std::vector<unsigned char> getAllData() const;
+
+		/**
+		 *	@brief
+		 *		returns tag from 4 bytes 
+		 *	@param a
+		 *		first byte from left
+		 *	@param b
+		 *		second byte from left
+		 *	@param c
+		 *		third byte from left
+		 *	@param d 
+		 *		last byte from left
+		 *	@return 
+		 *		unsigned int created from concatenation of 4 bytes
+		*/
+		static const unsigned int getTag(const unsigned char a, const unsigned char b, 
+				const unsigned char c, const unsigned char d);
 	private:
 		/**
 		 * structure representing node of Tlv Object
@@ -86,8 +105,6 @@ class Tlv {
 			const unsigned char global_size_; // size of data in this node and ith children
 			unsigned char *data_; 
 		};
-		const unsigned int getTag(const unsigned char a, const unsigned char b, 
-				const unsigned char c, const unsigned char d) const;
 
 		void addNode(const unsigned int tag, const unsigned char size, const unsigned char * const data, 
 			const bool embedded_tags_flag, TlvNode **position);

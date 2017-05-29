@@ -3,6 +3,12 @@
 #include <cstring>
 #include <iostream>
 
+/*
+project libtlv from MASM
+author Michal Citko
+date 24.05.2017
+*/
+
 using namespace std;
 
 Tlv::TlvNode::TlvNode(const unsigned int tag, const unsigned char size, const unsigned char * const data) : 
@@ -64,7 +70,7 @@ void Tlv::add(const unsigned int tag, const bool embedded_tags_flag, const unsig
 }
 
 inline const unsigned int Tlv::getTag(const unsigned char a, const unsigned char b, 
-		const unsigned char c, const unsigned char d) const {
+		const unsigned char c, const unsigned char d) {
 	return static_cast<int>(a<<24 | b<<16 | c<<8 | d);
 }
 
