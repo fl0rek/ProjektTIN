@@ -9,6 +9,13 @@
 #include <vector>
 #include <iostream>
 
+
+/*
+project libtlv from MASM
+author Michal Citko
+date 24.05.2017
+*/
+
 BOOST_AUTO_TEST_CASE(normal_find) {
 	Tlv o;
 	unsigned char first_buffer[] = {3, 3, 3};
@@ -45,9 +52,11 @@ BOOST_AUTO_TEST_CASE(normal_find3) {
 	o.add(13, 0, boost::size(first_buffer), first_buffer);
 	o.add(14, 1, boost::size(second_buffer), second_buffer);
 
-	std::vector<unsigned char> buffer = o.getTagData(16909060);
+	std::vector<unsigned char> buffer = o.getTagData(Tlv::getTag(1, 2, 3, 4));
 	// 1, 2, 3, 4 is 00000001000000100000001100000100 which is 16909060 
 	// 1<<24 | 2<<16 | 3<<8 | 4
+	// this is what getTag returns
+	
 	BOOST_REQUIRE_EQUAL(buffer.size(), 2); // check if data size == 2
 	BOOST_CHECK_EQUAL(buffer[0], 4); // check if data == 4, 4
 	BOOST_CHECK_EQUAL(buffer[1], 4);
@@ -121,5 +130,18 @@ BOOST_AUTO_TEST_CASE(parse_and_find) {
 		BOOST_CHECK_EQUAL(i, output_find_14[j]);
 		++j;
 	}
+}
+
+BOOST_AUTO_TEST_CASE(hex_test) {
+	unsigned char foo[] = { 0x11, 0x00, 0x00, 0x01, 0x00, 0x04, 0x00, 0x00, 0x00, 0x01 };
+	Tlv client_id_tag(foo, sizeof(foo));
+
+	std::vector<unsigned char> client_id_vector = client_id_tag.getTagData(Tlv::getTag(0x11, 0x00, 0x00, 0x01));
+
+	BOOST_REQUIRE_EQUAL(client_id_vector.size(), 4); // 4 is size of data which iss 0x00 0x00 0x00 0x01
+	BOOST_CHECK_EQUAL(client_id_vector[0], 0);
+	BOOST_CHECK_EQUAL(client_id_vector[1], 0);
+	BOOST_CHECK_EQUAL(client_id_vector[2], 0);
+	BOOST_CHECK_EQUAL(client_id_vector[3], 1);
 }
 
