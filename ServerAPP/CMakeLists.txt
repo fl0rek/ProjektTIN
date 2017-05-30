@@ -10,6 +10,6 @@ set (CMAKE_C_FLAGS "-std=c11 -ggdb -pedantic -Wall -Wextra -Wcast-align -Wcast-q
 #set_target_properties(net_server PROPERTIES
 #IMPORTED_LOCATION "${CMAKE_BINARY_DIR}/libnet/libnet_server.a" )
 
-target_link_libraries(server net_server)
+target_link_libraries(server net_server tlv tags)
 
 install(TARGETS server DESTINATION bin)

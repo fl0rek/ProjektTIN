@@ -31,6 +31,9 @@ bool libnet_send(const unsigned char tag, const size_t length,
 		const unsigned char *value)
 	__attribute__((warn_unused_result));
 
+bool libnet_send_to(int client_id, const unsigned char tag, const size_t length,
+		const unsigned char *value) __attribute__((warn_unused_result));
+
 #define ENOTAG 1 // specified tag has not been registered
 #define EQUEUE 2 // queue in inconsistent state (something is very wrong)
 #define ESIZE  3 // provided buffer too small

@@ -1,12 +1,18 @@
 cmake_minimum_required(VERSION 3.1)
 
+add_library(tlv STATIC src/Tlv.cpp)
+
+target_include_directories(tlv PUBLIC
+	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+	$<INSTALL_INTERFACE:include>
+	)
+
 include_directories(include)
 file(GLOB SOURCES "src/*.cpp")
 
 add_compile_options(-std=c++14)
 find_package(Boost COMPONENTS unit_test_framework REQUIRED)
 
-add_library(tlv STATIC src/Tlv.cpp)
 
 add_executable(TlvTests ${SOURCES})
 

@@ -154,6 +154,10 @@ error:
 	return false;
 }
 
+tlv *append_client_data(client_info *client, tlv *message) {
+	return message;
+}
+
 #ifdef BUILD_SAMPLE_EXECUTABLE
 
 char addr[] = "localhost";

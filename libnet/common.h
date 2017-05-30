@@ -1,3 +1,4 @@
+#pragma once
 
 #include <semaphore.h>
 #include <stdbool.h>
@@ -80,6 +81,8 @@ bool enqueue_message(tlv *message);
 int create_selfpipe(int *selfpipe_write_end, int *selfpipe_read_end);
 int notify_selfpipe(int selfpipe_write_end);
 
+void hexDump(char *desc, void *addr, int len);
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic warning "-Wredundant-decls"
 bool libnet_init(const unsigned char *tags_to_register,
@@ -99,3 +102,5 @@ void clear_fd_select(int fd);
 unsigned get_client_id(client_info *client);
 client_info* get_client_by_fd(int fd);
 available_tag_t* get_available_tags_struct(unsigned char tag);
+
+tlv* append_client_data(client_info *client, tlv *message);
