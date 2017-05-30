@@ -5,10 +5,9 @@
 #include <QtGui>
 
 
-std::list<QString> MainWindow::chat;
+std::list<std::string> MainWindow::chat;
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
-
     ui(new Ui::MainWindow){
     ui->setupUi(this);
     ui->textBrowser->setText("Chose your nickname: ");
@@ -37,35 +36,36 @@ void MainWindow::on_pushButton_clicked()
     }
     else
     {
-        setMessage(ui->textEdit->toPlainText());
+        this->messageToSend = ui->textEdit->toPlainText();
         ui->textEdit->clear();
-        char* message = prepareMessage();
-        sendToPipe(message);
+        this->currentTime = QDateTime::currentDateTime().time().toString();
+        Message msg;
+        msg.user= this->userName.toStdString();
+        msg.time = this->currentTime.toStdString();
+        msg.m = this->messageToSend.toStdString();
+        sendToPipe(msg);
     }
 }
 
-char* MainWindow::prepareMessage()
+char* MainWindow::prepareMessage(QString msg)
 {
     QString tmp = "";
-    setTime(QDateTime::currentDateTime().time().toString());
-    tmp = this->userName + "(" + this->currentTime + "): " + this->messageToSend;
+    this->currentTime = QDateTime::currentDateTime().time().toString();
+    tmp = this->userName + "(" + this->currentTime + "): " + msg;
 
     return qstrdup(qPrintable(tmp));
 }
 
-void MainWindow::sendToPipe(const char* message)
+void MainWindow::sendToPipe(Message msg)
 {
-    //serialize();
-    std::cout << message << std::endl;
+    std::cout << serialize(msg) <<std::endl;
 }
 
-void MainWindow::readFromPipe(QString message)
+void MainWindow::readFromPipe(std::string message)
 {
-
-    //QString message = deserialize(message);
-    if(message.size() <= MESSAGELENGTH)
+    if(message.size() <= 250)
     {
-        chat.push_back(message.trimmed());
+        chat.push_back(message);
     }
     else
     {
@@ -80,12 +80,10 @@ void MainWindow::getUserNickname()
     {
         srand(time(NULL));
         std::string s = std::to_string(rand() % 255);
-        setUser(tmp + QString::fromStdString(s));
-        setUser(this->userName.replace("\n","").replace("\t",""));
+        this->userName = tmp + QString::fromStdString(s);
         ui->textBrowser->clear();
         ui->textEdit->clear();
         ui->textBrowser->setTextColor(QColor(0, 0, 0));
-        chat.push_back("Your username is: " + this->userName);
     }
     else{
         this->userName = "";
@@ -104,7 +102,7 @@ bool MainWindow::checkUserName(QString nick)
 
 void MainWindow::setText()
 {
-    if(this->userName != ""){
+    if(this->userName != "" ){
         ui->textBrowser->clear();
         if(chat.size() > MAX_SIZE - 1)
         {
@@ -112,34 +110,28 @@ void MainWindow::setText()
         }
         for(auto it = chat.begin(); it != chat.end(); it++)
         {
-            ui->textBrowser->append(*it);
+            Message msg = deserialize(*it);
+            QString toDisplay = QString::fromStdString(msg.user) + "(" +QString::fromStdString(msg.time) + "): "+
+                    QString::fromStdString(msg.m);
+            ui->textBrowser->append(toDisplay);
+
         }
     }
 }
-void MainWindow::setUser(QString usr)
+std::string MainWindow::serialize(Message msg)
 {
-    this->userName = usr;
+    std::stringstream ss;
+    boost::archive::text_oarchive oa(ss);
+    oa << msg;
+    return ss.str();
+
 }
-void MainWindow::setMessage(QString msg)
+Message MainWindow::deserialize(std::string s)
 {
-    this->messageToSend = msg;
-}
-void MainWindow::setTime(QString time)
-{
-    this->currentTime = time;
-}
-QString MainWindow::getUser()
-{
-    return this->userName;
-}
-QString MainWindow::getMessage()
-{
-    return this->messageToSend;
-}
-QString MainWindow::getTime()
-{
-    return this->currentTime;
-}
-Ui::MainWindow* MainWindow::getUi(){
-    return this->ui;
+    Message msg;
+    std::stringstream ss;
+    ss << s;
+    boost::archive::text_iarchive ia(ss);
+    ia >> msg;
+    return msg;
 }
