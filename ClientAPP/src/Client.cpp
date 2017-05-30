@@ -145,26 +145,26 @@ bool Client::connectToServer(const char * const address, const char * const serv
 
 void Client::requestGameSynchronisation()
 {
-	while(!sendToServer(last_state_, last_state_size_));
+//	while(!sendToServer(last_state_, last_state_size_));
 }
 
-void inline Client::sendToGame(const unsigned char * const data, const ssize_t size) const noexcept
+void inline Client::sendToGame(const unsigned char * const data, const ssize_t size) const
 {
-	ssize_t size = write(pipefd_game_out_[1], data, size);
+	ssize_t write_size = write(pipefd_game_out_[1], data, size);
 
-	if(size < 0)
+	if(write_size < 0)
 		throw ChildAppError("Problem with pipe, cannot write to game");
 }
 
 void inline Client::sendToChat(const unsigned char * const data, const ssize_t size) const
 {
-	size_t size = write(pipefd_chat_out_[1], data, size);
+	ssize_t write_size = write(pipefd_chat_out_[1], data, size);
 
-	if(size < 0)
+	if(write_size < 0)
 		throw ChildAppError("Problem with pipe, cannot write to chat");
 }
 
-bool inline Client::sendToServer(const unsigned char * const data, const ssize_t size) const
+bool inline Client::sendToServer(const unsigned char tag, const unsigned char * const data, const ssize_t size) const noexcept
 {
 	return libnet_send(tag, size, data);
 }
@@ -191,10 +191,7 @@ void Client::receiveFromGame()
 	if(endgame)
 		changeToViewerMode();
 	else
-		if(sendToServer(data, size))
-			dziala
-		else
-			nie dziala
+		sendToServer(tag::game, data, size);
 }
 
 void Client::receiveFromChat() const
@@ -205,7 +202,7 @@ void Client::receiveFromChat() const
 	if(size < 0)
 		throw ChildAppError("Problem with pipe, cannot read from chat");
 
-	while(!sendToServer(data, size));
+	while(!sendToServer(tag::chat, data, size));
 }
 
 
@@ -218,17 +215,17 @@ void Client::receiveFromServer() noexcept
 	{
 		libnet_wait_for_new_message();
 
-		if((size = wait_for_tag(tag::game, data, kReceiveBufferSize, false)) > 0) // with false doesnt block
+		if((size = libnet_wait_for_tag(tag::game, data, kReceiveBufferSize, false)) > 0) // with false doesnt block
 		{
 			sendToGame(data, size);
 			memcpy(last_state_, data, sizeof(unsigned char) * size);
 			last_state_size_ = size;
 		}
-		else if((size = wait_for_tag(tag::chat, data, kReceiveBufferSize, false)) > 0)
+		else if((size = libnet_wait_for_tag(tag::chat, data, kReceiveBufferSize, false)) > 0)
 		{
 			sendToChat(data, size);
 		}
-		switch(buffer_len)
+		switch(size)
 		{
 			case -ENOTAG:
 			case -EQUEUE:

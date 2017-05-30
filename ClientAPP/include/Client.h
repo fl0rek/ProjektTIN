@@ -38,20 +38,20 @@ class Client
 				const  char * const service) noexcept;
 		void requestGameSynchronisation();
 		void inline sendToGame(const unsigned char * const data, 
-				const ssize_t size) const noexcept;
+				const ssize_t size) const;
 		void inline sendToChat(const unsigned char * const data, 
-				const ssize_t size) const noexcept;
-		bool inline sendToServer(const unsigned char * const data, 
-				const ssize_t size) const noexcept;
-		void receiveFromGame() noexcept;
-		void receiveFromChat() const noexcept;
+				const ssize_t size) const;
+		bool inline sendToServer(const unsigned char tag, 
+			const unsigned char * const data, const ssize_t size) const noexcept;
+		void receiveFromGame();
+		void receiveFromChat() const;
 
 
 		const bool kGameMode = 1;
 		const bool kChatMode = 0;
 		static const ssize_t kReceiveBufferSize = 1000;
-		const char kGameApp[4] = "game"
-		const char kChatApp[4] = "chat"
+		const char kGameApp[5] = "game";
+		const char kChatApp[5] = "chat";
 
 		char session_key_[32];
 		int app_pid_;
