@@ -10,16 +10,16 @@
 #define UI_MAINWINDOW_H
 
 #include <QtCore/QVariant>
-#include <QtGui/QAction>
-#include <QtGui/QApplication>
-#include <QtGui/QButtonGroup>
-#include <QtGui/QHeaderView>
-#include <QtGui/QMainWindow>
-#include <QtGui/QPushButton>
-#include <QtGui/QStatusBar>
-#include <QtGui/QTextBrowser>
-#include <QtGui/QTextEdit>
-#include <QtGui/QWidget>
+#include <QAction>
+#include <QApplication>
+#include <QButtonGroup>
+#include <QHeaderView>
+#include <QMainWindow>
+#include <QPushButton>
+#include <QStatusBar>
+#include <QTextBrowser>
+#include <QTextEdit>
+#include <QWidget>
 
 QT_BEGIN_NAMESPACE
 
@@ -61,10 +61,10 @@ public:
 
     void retranslateUi(QMainWindow *MainWindow)
     {
-        MainWindow->setWindowTitle(QApplication::translate("MainWindow", "chatAPP", 0, QApplication::UnicodeUTF8));
+        MainWindow->setWindowTitle(QApplication::translate("MainWindow", "chatAPP", 0, 0));
         MainWindow->setProperty("s", QVariant(QString()));
-        pushButton->setText(QApplication::translate("MainWindow", "SEND", 0, QApplication::UnicodeUTF8));
-        pushButton->setShortcut(QApplication::translate("MainWindow", "Return", 0, QApplication::UnicodeUTF8));
+        pushButton->setText(QApplication::translate("MainWindow", "SEND", 0, 0));
+        pushButton->setShortcut(QApplication::translate("MainWindow", "Return", 0, 0));
     } // retranslateUi
 
 };
