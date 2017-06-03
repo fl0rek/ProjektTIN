@@ -149,7 +149,9 @@ bool Client::connectToServer(const char * const address, const char * const serv
 
 void Client::requestGameSynchronisation()
 {
+	;
 	//TODO
+//	while(!sendToServer(last_state_, last_state_size_));
 }
 
 void inline Client::sendToGame(const unsigned char * const data, const ssize_t size) const
@@ -168,7 +170,7 @@ void inline Client::sendToChat(const unsigned char * const data, const ssize_t s
 		throw ChildAppError("Problem with pipe, cannot write to chat");
 }
 
-bool Client::sendToServer(const unsigned char tag, const unsigned char * const data, const ssize_t size) const noexcept
+bool inline Client::sendToServer(const unsigned char tag, const unsigned char * const data, const ssize_t size) const noexcept
 {
 	//TODO
 	Tlv buffer;// get rid of this Tlv, chat and game should use it
