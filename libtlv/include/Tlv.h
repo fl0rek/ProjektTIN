@@ -18,13 +18,13 @@ class Tlv {
 	public:
 		/**
 		 *	@brief
-		 *		create empty Tlv object	
+		 *		create empty Tlv object
 		*/
 		Tlv();
 
 		/**
 		 *	@brief
-		 *		create Tlv object from data	
+		 *		create Tlv object from data
 		 *	@param data
 		 *		pointer to data buffer with header and data
 		 *	@param size
@@ -41,27 +41,34 @@ class Tlv {
 		 *		1 - if there are other tags inside data 0 - if not
 		 *	@param size
 		 *		number of elements in data
-		 *	@param data		
+		 *	@param data
 		 *		pointer to data buffer with header and data
 		*/
 		void add(const unsigned int tag, const bool embedded_tags_flag, const unsigned char size,
 				const unsigned char * const data);
+		void add(const unsigned char tag[4], const bool embedded_tags_flag, const unsigned char size,
+				const unsigned char * const data);
 		/**
 		 *	@brief
-		 *		returns data without header that is associated with tag	
-		 *	@param tag 
+		 *		returns data without header that is associated with tag
+		 *	@param tag
 		 *		tag associated with data
-		 *	@return 
+		 *	@return
 		 *		vector with data
 		*/
 		std::vector<unsigned char> getTagData(const unsigned int tag) const;
+		std::vector<unsigned char> getTagData(const unsigned char tag[4]) const;
 		/**
 		 *	@brief
 		 *		returns every vector with every element(header + data) in the object
-		 *	@return 
+		 *	@return
 		 *		vector with header + data of every element
 		*/
 		std::vector<unsigned char> getAllData() const;
+
+		static const unsigned int getTag(const unsigned char a, const unsigned char b,
+				const unsigned char c, const unsigned char d);
+		static const unsigned int getTag(const unsigned char tag[4]);
 	private:
 		/**
 		 * structure representing node of Tlv Object
@@ -71,25 +78,23 @@ class Tlv {
 			 * 	@brief
 			 * 		creates TlvNode object that has no children(because it has data in it)
 			*/
-			TlvNode(const unsigned int tag, const unsigned char size, const unsigned char * const data); 
+			TlvNode(const unsigned int tag, const unsigned char size, const unsigned char * const data);
 			/**
 			 * 	@brief
 			 * 		creates TlvNode object that has children so its size is 0
 			*/
 			TlvNode(const unsigned int tag, const unsigned char gsize);
 			~TlvNode();
-			
-			TlvNode *next_sibling_; // pointer to next element 
+
+			TlvNode *next_sibling_; // pointer to next element
 			TlvNode *first_child_; // pointer to the element embedded in this element
-			const unsigned int tag_; 
+			const unsigned int tag_;
 			const unsigned char size_; //size of data in this node
 			const unsigned char global_size_; // size of data in this node and ith children
-			unsigned char *data_; 
+			unsigned char *data_;
 		};
-		const unsigned int getTag(const unsigned char a, const unsigned char b, 
-				const unsigned char c, const unsigned char d) const;
 
-		void addNode(const unsigned int tag, const unsigned char size, const unsigned char * const data, 
+		void addNode(const unsigned int tag, const unsigned char size, const unsigned char * const data,
 			const bool embedded_tags_flag, TlvNode **position);
 
 		const TlvNode * const findNode(const TlvNode * const node, const unsigned int tag) const;

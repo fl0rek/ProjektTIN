@@ -17,6 +17,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <tags.h>
 
 #include "common.h"
 
@@ -53,7 +54,7 @@ error:
 	return 0;
 }
 
-static int initialize_server(int port, int connections, char* address) {
+static int initialize_server(int port, int connections, const char* address) {
 	debug1("initalize_server");
 
 	for(client_info *client = clients; client < clients + MAX_CLIENT_NUMBER; client++) {
@@ -129,7 +130,7 @@ error:
 	if(fd > 0 && close(fd)) {
 		log_err1("error closing socket");
 	}
-	//exit(EXIT_FAILURE);
+	return -1;
 }
 
 inline unsigned get_client_id(client_info *client) {
@@ -157,14 +158,25 @@ void clear_fd_select(int fd) {
 }
 
 int selfpipe_write_end;
-bool exiting = false;
-static int libnet_main(char *address) {
-	FD_ZERO(&sockets);
 
-	int master_socket_fd = initialize_server(4200, 1, address);
+int master_socket_fd;
+
+static void close_master_socket(void) {
+	close_socket(master_socket_fd);
+}
+
+bool exiting = false;
+static int libnet_main(const char *address) {
+	FD_ZERO(&sockets);
+	int port = 4200;
+
+	master_socket_fd = initialize_server(port, 1, address);
+	atexit(close_master_socket);
 
 	int selfpipe_fd;
 	check1((selfpipe_fd = create_selfpipe(&selfpipe_write_end, 0)), "selfpipe init");
+
+	log_info("listening on %s:%d", address, port);
 
 	while(!exiting) {
 		add_fd_to_select(selfpipe_fd);
@@ -191,7 +203,7 @@ static int libnet_main(char *address) {
 		}
 
 	}
-	close_socket(master_socket_fd);
+	close_master_socket();
 
 	return 0;
 error:
@@ -206,27 +218,19 @@ static void* libnet_main_pthread_wrapper(void * args) {
 
 pthread_t libnet_thread;
 
-/*
-static int setup_signal_handler() {
-	struct sigaction sa;
-	sa.sa_handler = SIG_IGN;
-	sa.sa_flags = 0;
-
-	return sigaction(SIGPIPE, &sa, 0);
-}
-*/
-
-bool libnet_thread_start(char *address) {
-	//check1(setup_signal_handler() == 0, "Signal handler setup");
+bool libnet_thread_start(const char *address) {
 	//TODO(florek) better error handling?
-	check1(!pthread_create(&libnet_thread, 0, libnet_main_pthread_wrapper, &address),
+	const char **params = malloc(sizeof * address);
+	check_mem(params);
+	*params = address;
+	check1(!pthread_create(&libnet_thread, 0, libnet_main_pthread_wrapper, params),
 			"pthread_create libnet_thread");
 	return true;
 error:
 	return false;
 }
 
-static bool libnet_thread_shutdown() {
+bool libnet_thread_shutdown() {
 	exiting = true;
 	check1(notify_selfpipe(selfpipe_write_end) >= 0, "selfpipe write");
 	//TODO(florek) error handling
@@ -246,7 +250,8 @@ void libnet_debug_dump_client_info() {
 }
 #endif
 
-bool libnet_send(unsigned char tag, size_t length, unsigned char *value) {
+bool libnet_send(const unsigned char tag, const size_t length,
+		const unsigned char *value) {
 	bool success = true;
 
 	for(unsigned i = 0; i < MAX_CLIENT_NUMBER; i++) {
@@ -257,6 +262,39 @@ bool libnet_send(unsigned char tag, size_t length, unsigned char *value) {
 
 	return success;
 }
+
+bool libnet_send_to(const int client_id, const unsigned char tag,
+		const size_t length, const unsigned char *value) {
+	client_info *client = get_client_by_fd(client_id);
+	return send_tag(client, tag, length, value);
+}
+
+tlv* append_client_data(client_info *client, tlv *message) {
+	char client_id[TAG_SIZE + 2 + sizeof(int)];
+	memcpy(client_id, tag_internal_client_id, sizeof(tag_internal_client_id));
+	client_id[TAG_SIZE] = sizeof(client->fd);
+	client_id[TAG_SIZE+1] = 1; // because for some reason we need some flippin flag
+	memcpy(client_id + TAG_SIZE + 2, &client->fd, sizeof(client->fd));
+
+	size_t old_length = message->length;
+	hexDump("message", message, message->length + sizeof(*message));
+
+	message->length += sizeof(client_id);
+
+	message = realloc(message, message->length + sizeof(*message));
+	check_mem(message);
+
+	hexDump("client_id", client_id, sizeof(client_id));
+
+	memcpy(&message->value[old_length], client_id, sizeof(client_id));
+
+	hexDump("message", message, message->length + sizeof(*message));
+	return message;
+error:
+	return 0;
+}
+
+#ifdef BUILD_SAMPLE_EXECUTABLE
 
 int main(int argc, char *argv[]) {
 
@@ -269,4 +307,4 @@ int main(int argc, char *argv[]) {
 	return 0;
 }
 
-
+#endif
