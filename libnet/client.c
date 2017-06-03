@@ -61,21 +61,47 @@ static int libnet_client_main(const char *address, const char* service) {
 	int selfpipe_fd;
 	check1((selfpipe_fd = create_selfpipe(&selfpipe_write_end, 0)), "selfpipe init");
 	do {
-		int sockfd;
-		if((sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol) < 0)) {
+		int sockfd = -1;
+		if((sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) < 0) {
 			continue;
 		}
 		add_fd_to_select(selfpipe_fd);
 		add_fd_to_select(sockfd);
 
-		if(!connect(sockfd, res->ai_addr, res->ai_addrlen)) {
+		if(connect(sockfd, res->ai_addr, res->ai_addrlen)) {
 			log_err1("connect");
 			close_socket(sockfd);
 			continue;
 		}
 
-		while(!exiting)
-			handle_client_input(sockfd);
+		server->fd = sockfd;
+		server->state = STATE_CONNECTING;
+		server->read_status = READ_STATUS_DEFAULT;
+		server->retries = 0;
+
+		check1(send_tag(server, TAG_HELO, 0, 0), "sending hello");
+
+		while(!exiting) {
+			log_info1("Waiting for server or selfpipie");
+			//send_tag(server, 0xee, 3, "foo");
+			check1(select(nfds, &selects, 0, 0, 0) >= 0, "select");
+			for(int i = 0; i < nfds; i++) {
+				if(FD_ISSET(i, &selects)) {
+					log_info("Action on fd %d", i);
+					if(i == server->fd) {
+						handle_client_input(server->fd);
+					} else {
+						log_info1("Got interrupted by selfpipe");
+						continue; // probably selfpipe
+					}
+				}
+			}
+
+			if(server->state == STATE_NONE) {
+				exiting = true;
+				log_warn1("Lost connection to server, exiting");
+			}
+		}
 
 		close(sockfd);
 	} while (!(res = res->ai_next));
@@ -86,6 +112,11 @@ error:
 		freeaddrinfo(res_head);
 
 	return 0;
+}
+
+bool libnet_send(const unsigned char tag, const size_t length,
+		const unsigned char *value) {
+	return send_tag(server, tag, length, value);
 }
 
 static void* libnet_main_pthread_wrapper(void * args) {
@@ -100,8 +131,8 @@ static void* libnet_main_pthread_wrapper(void * args) {
 
 pthread_t libnet_thread;
 
-bool libnet_thread_start(char *address, char *service) {
-	char **params = malloc(2 * sizeof * params);
+bool libnet_thread_start(const char *address, const char *service) {
+	const char **params = malloc(2 * sizeof * params);
 	params[0] = address;
 	params[1] = service;
 	log_info("XY : %s, %s", params[0], params[1]);
@@ -112,7 +143,7 @@ error:
 	return false;
 }
 
-static bool libnet_thread_shutdown() {
+bool libnet_thread_shutdown() {
 	exiting = true;
 	check1(notify_selfpipe(selfpipe_write_end) >= 0, "selfpipe write");
 	//TODO(florek) error handling
@@ -123,6 +154,11 @@ error:
 	return false;
 }
 
+tlv *append_client_data(client_info *client, tlv *message) {
+	return message;
+}
+
+#ifdef BUILD_SAMPLE_EXECUTABLE
 
 char addr[] = "localhost";
 char serv[] = "4200";
@@ -138,3 +174,4 @@ int main(int argc, char **argv) {
 	return 0;
 }
 
+#endif
