@@ -16,10 +16,56 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <tags.h>
+
+//https://gist.github.com/domnikl/af00cc154e3da1c5d965
+void hexDump(char *desc, void *addr, int len) {
+    int i;
+    unsigned char buff[17];
+    unsigned char *pc = (unsigned char*)addr;
+
+    // Output description if given.
+    if (desc != NULL)
+        printf ("%s:\n", desc);
+
+    // Process every byte in the data.
+    for (i = 0; i < len; i++) {
+        // Multiple of 16 means new line (with line offset).
+
+        if ((i % 16) == 0) {
+            // Just don't print ASCII for the zeroth line.
+            if (i != 0)
+                printf("  %s\n", buff);
+
+            // Output the offset.
+            printf("  %04x ", i);
+        }
+
+        // Now the hex code for the specific character.
+        printf(" %02x", pc[i]);
+
+        // And store a printable ASCII character for later.
+        if ((pc[i] < 0x20) || (pc[i] > 0x7e)) {
+            buff[i % 16] = '.';
+        } else {
+            buff[i % 16] = pc[i];
+        }
+
+        buff[(i % 16) + 1] = '\0';
+    }
+
+    // Pad out last line if not exactly 16 characters.
+    while ((i % 16) != 0) {
+        printf("   ");
+        i++;
+    }
+
+    // And print the final ASCII bit.
+    printf("  %s\n", buff);
+}
+
 #define CLIENT_MAX_RETRIES 30
 
-//bool enqueue_message(tlv *message);
-//bool notify_tag(unsigned char tag);
 
 tlv *message_queue[MAX_MESSAGE_QUEUE];
 sem_t free_message_slots;
@@ -39,11 +85,13 @@ available_tag_t* get_available_tags_struct(unsigned char tag) {
 	return 0;
 }
 
-bool libnet_init(unsigned char *tags_to_register, unsigned tags_to_register_number) {
+bool libnet_init(const unsigned char *tags_to_register,
+		const unsigned tags_to_register_number) {
 	available_tags = malloc(tags_to_register_number * sizeof * available_tags);
 	check_mem(available_tags);
 
 	for(unsigned i = 0; i < tags_to_register_number; i++) {
+		debug("initializing %x tag semaphore", tags_to_register[i]);
 		available_tags[i].tag = tags_to_register[i];
 		check1(!sem_init(&available_tags[i].number, 0, 0), "tags sem_init");
 	}
@@ -65,9 +113,24 @@ error:
 	return false;
 }
 
-ssize_t libnet_wait_for_tag(unsigned char tag, char *buffer, size_t length) {
+static bool wait_for_tag(unsigned char tag, bool block) {
+	available_tag_t *tag_sem = get_available_tags_struct(tag);
+	check(tag_sem, "Message with unknown tag %x ignoring", tag);
+	if(block) {
+		check(!sem_wait(&tag_sem->number), "sem_wait tag %x", tag);
+	} else {
+		check(!sem_trywait(&tag_sem->number), "sem_trywait tag %x", tag);
+	}
+	return true;
+error:
+	return false;
+}
+
+ssize_t libnet_wait_for_tag(const unsigned char tag, unsigned char *buffer, const size_t length, const bool block);
+ssize_t libnet_wait_for_tag(const unsigned char tag, unsigned char *buffer, const size_t length, const bool block) {
+	tlv* msg = 0;
 	int error = ENOTAG;
-	check1(wait_for_tag(tag), "libnet_wait_for_tag wait_for_tag");
+	check1(wait_for_tag(tag, block), "libnet_wait_for_tag wait_for_tag");
 
 	tlv** message_queue = get_message_queue();
 
@@ -79,7 +142,7 @@ ssize_t libnet_wait_for_tag(unsigned char tag, char *buffer, size_t length) {
 	error = EQUEUE;
 	check1(message_queue[tag_message]->tag == tag, "Message queue inconsistent");
 
-	tlv* msg = message_queue[tag_message];
+	msg = message_queue[tag_message];
 	message_queue[tag_message] = 0;
 
 	error = ESIZE;
@@ -92,17 +155,20 @@ ssize_t libnet_wait_for_tag(unsigned char tag, char *buffer, size_t length) {
 		message_length = (ssize_t) msg->length;
 	} else {
 		log_err1("Message longer than SSIZE_MAX");
+		goto error;
 	}
 	free(msg);
 
 	return message_length;
 error:
+	if(msg)
+		free(msg);
 	return -error;
 }
 
 
 bool enqueue_message(tlv *message) {
-	check1(sem_wait(&free_message_slots), "wait free_message_slots");
+	check1(!sem_wait(&free_message_slots), "wait free_message_slots");
 
 	unsigned empty_slot_index;
 	for(empty_slot_index = 0;
@@ -198,11 +264,23 @@ static bool handle_internal_message(client_info *client, tlv *message) {
 			handle_bye_message(client, message);
 			break;
 		default:
-			log_warn("Unexpected message with tag %x and length %d",
+			log_warn("Unexpected message with tag %x and length %lu",
 					message->tag, message->length);
 			return false;
 	}
 	return true;
+}
+
+pthread_cond_t new_message = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t new_message_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+bool libnet_wait_for_new_message() {
+	check1(!pthread_mutex_lock(&new_message_mutex), "lock new_message_mutex");
+	check1(!pthread_cond_wait(&new_message, &new_message_mutex), "cond_wait new_message");
+	check1(!pthread_mutex_unlock(&new_message_mutex), "unlock new_message_mutex");
+	return true;
+error:
+	return false;
 }
 
 static bool notify_tag(unsigned char tag) {
@@ -212,6 +290,9 @@ static bool notify_tag(unsigned char tag) {
 		return false;
 	}
 	check(!sem_post(&tag_sem->number), "sem_post tag %x", tag);
+	check1(!pthread_mutex_lock(&new_message_mutex), "lock new_message_mutex");
+	check1(!pthread_cond_signal(&new_message), "new_message notify");
+	check1(!pthread_mutex_unlock(&new_message_mutex), "unlock new_message_mutex");
 	return true;
 error:
 	return false;
@@ -222,13 +303,15 @@ bool handle_message(client_info *client, tlv *message) {
 			get_client_id(client), message->length);
 	if((message->tag & TAG_INTERNAL_MASK) == TAG_INTERNAL_MASK)
 		return handle_internal_message(client, message);
-	else
-		return enqueue_message(message) &&
-			notify_tag(message->tag);
+	else {
+		return (message = append_client_data(client, message))
+			&& enqueue_message(message)
+			&& notify_tag(message->tag);
+	}
 }
 
-bool send_tag(client_info const * client, unsigned char tag,
-		size_t length, unsigned char * value) {
+bool send_tag(client_info const * client, const unsigned char tag,
+		const size_t length, const unsigned char * value) {
 	debug("Sending tag %x", tag);
 	unsigned char * buff = malloc(HEADER_LEN + length);
 	buff[0] = tag;
@@ -279,14 +362,6 @@ error:
 	return false;
 }
 
-bool wait_for_tag(unsigned char tag) {
-	available_tag_t *tag_sem = get_available_tags_struct(tag);
-	check(tag_sem, "Message with unknown tag %x ignoring", tag);
-	check(!sem_wait(&tag_sem->number), "sem_wait tag %x", tag);
-	return true;
-error:
-	return false;
-}
 
 bool try_read_header(client_info *client, unsigned char *buff) {
 	return try_read(client, buff, HEADER_LEN);

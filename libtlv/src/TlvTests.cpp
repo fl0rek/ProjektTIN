@@ -8,6 +8,7 @@
 #include <boost/range.hpp>
 #include <vector>
 #include <iostream>
+#include <memory>
 
 BOOST_AUTO_TEST_CASE(normal_find) {
 	Tlv o;
@@ -121,5 +122,23 @@ BOOST_AUTO_TEST_CASE(parse_and_find) {
 		BOOST_CHECK_EQUAL(i, output_find_14[j]);
 		++j;
 	}
+}
+
+
+BOOST_AUTO_TEST_CASE(foo) {
+	unsigned char foo[] = { 0x11, 0x00, 0x00, 0x01, 0x00, 0x04, 0x00, 0x00, 0x00, 0x01 };
+	std::cout << "OK" << std::endl;
+	Tlv client_id_tag(foo, sizeof(foo));
+	std::cout << "OK" << std::endl;
+
+	std::vector<unsigned char> client_id_vector = client_id_tag.getTagData(Tlv::getTag(0x11, 0x00, 0x00, 0x01));
+	std::cout << "OK" << client_id_vector.size() << std::endl;
+
+	int client_id;
+	for(auto it = client_id_vector.begin(); it != client_id_vector.end(); it++) {
+		std::cout << *it <<std::endl;
+	}
+	memcpy(&client_id, &client_id_vector[0], sizeof(client_id));
+	BOOST_CHECK_EQUAL(client_id, 1);
 }
 
