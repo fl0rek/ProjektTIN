@@ -4,6 +4,8 @@ author Michal Citko
 date 25.05.2017
 */
 #include "Client.h"
+#include <iostream>
+#include <vector>
 
 Client::Client(const char * const address, const char * const service) : mode_(kChatMode)
 {
@@ -18,6 +20,7 @@ Client::Client(const char * const address, const char * const service) : mode_(k
 
 	if(!startGameApp())
 		throw ChildAppError("Cannot start game app");
+
 }
 
 Client::Client(const char * const address, const char * const service, const char * const session_key) 
@@ -136,8 +139,9 @@ bool Client::startGameApp() noexcept
 
 bool Client::connectToServer(const char * const address, const char * const service) noexcept
 {
-	if(libnet_init(tags_to_register, sizeof(tags_to_register) / sizeof(*tags_to_register)) 
-			|| libnet_thread_start(address, service))
+
+	if(!libnet_init(tags_to_register, sizeof(tags_to_register) / sizeof(*tags_to_register)) 
+			|| !libnet_thread_start(address, service))
 		return false;
 
 	return true;
@@ -145,28 +149,32 @@ bool Client::connectToServer(const char * const address, const char * const serv
 
 void Client::requestGameSynchronisation()
 {
-	while(!sendToServer(last_state_, last_state_size_));
+	//TODO
 }
 
-void inline Client::sendToGame(const unsigned char * const data, const ssize_t size) const noexcept
+void inline Client::sendToGame(const unsigned char * const data, const ssize_t size) const
 {
-	ssize_t size = write(pipefd_game_out_[1], data, size);
+	ssize_t write_size = write(pipefd_game_out_[1], data, size);
 
-	if(size < 0)
+	if(write_size < 0)
 		throw ChildAppError("Problem with pipe, cannot write to game");
 }
 
 void inline Client::sendToChat(const unsigned char * const data, const ssize_t size) const
 {
-	size_t size = write(pipefd_chat_out_[1], data, size);
+	ssize_t write_size = write(pipefd_chat_out_[1], data, size);
 
-	if(size < 0)
+	if(write_size < 0)
 		throw ChildAppError("Problem with pipe, cannot write to chat");
 }
 
-bool inline Client::sendToServer(const unsigned char * const data, const ssize_t size) const
+bool Client::sendToServer(const unsigned char tag, const unsigned char * const data, const ssize_t size) const noexcept
 {
-	return libnet_send(tag, size, data);
+	//TODO
+	Tlv buffer;// get rid of this Tlv, chat and game should use it
+	buffer.add(0x88, 0 , size, data);
+	std::vector<unsigned char> full_buffer = buffer.getAllData();
+	return libnet_send(tag, full_buffer.size(), full_buffer.data());
 }
 
 void Client::receiveFromApp() noexcept
@@ -187,14 +195,11 @@ void Client::receiveFromGame()
 
 	if(size < 0)
 		throw ChildAppError("Problem with pipe, cannot read from game");
-
-	if(endgame)
-		changeToViewerMode();
-	else
-		if(sendToServer(data, size))
-			dziala
-		else
-			nie dziala
+//TODO
+//	if(endgame)
+//		changeToViewerMode();
+//	else
+		sendToServer(tag::game, data, size);
 }
 
 void Client::receiveFromChat() const
@@ -205,7 +210,7 @@ void Client::receiveFromChat() const
 	if(size < 0)
 		throw ChildAppError("Problem with pipe, cannot read from chat");
 
-	while(!sendToServer(data, size));
+	while(!sendToServer(tag::chat, data, size)); //TODO maybe not in while
 }
 
 
@@ -218,23 +223,29 @@ void Client::receiveFromServer() noexcept
 	{
 		libnet_wait_for_new_message();
 
-		if((size = wait_for_tag(tag::game, data, kReceiveBufferSize, false)) > 0) // with false doesnt block
+		if((size = libnet_wait_for_tag(tag::game, data, kReceiveBufferSize, false)) > 0) // with false doesnt block
 		{
 			sendToGame(data, size);
 			memcpy(last_state_, data, sizeof(unsigned char) * size);
 			last_state_size_ = size;
 		}
-		else if((size = wait_for_tag(tag::chat, data, kReceiveBufferSize, false)) > 0)
+		else if((size = libnet_wait_for_tag(tag::chat, data, kReceiveBufferSize, false)) > 0)
 		{
-			sendToChat(data, size);
+			//TODO change this, Tlv should bu used by chat to perform this operation
+			sendToChat(data + 6, size - 17);
 		}
-		switch(buffer_len)
+		else if((size = libnet_wait_for_tag(tag::internal, data, kReceiveBufferSize, false)) > 0)
+		{
+			//TODO
+			std::cout<<"interna";
+		}
+
+		switch(size)
 		{
 			case -ENOTAG:
 			case -EQUEUE:
 			case -ESIZE:
 				throw NetworkError("Libnet reported problem");
 		}
-		//requestGameSynchronisation();
 	}
 }
