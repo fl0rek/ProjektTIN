@@ -161,7 +161,7 @@ BOOST_AUTO_TEST_CASE(parse_and_get) {
 
 
 BOOST_AUTO_TEST_CASE(parse_and_find) {
-	unsigned char input[] = {0, 0, 0, 14, 1, 13, 0, 0, 0, 11, 0, 2, 4, 4, 0, 0, 0, 13, 0, 1, 2};
+	unsigned char input[] = {0, 0, 0, 14, 1, 15, 0, 0, 0, 11, 0, 2, 4, 4, 0, 0, 0, 13, 0, 1, 2};
 	std::vector<unsigned char> output_find_14 = {0, 0, 0, 11, 0, 2, 4, 4, 0, 0, 0, 13, 0, 1, 2};
 
 	Tlv o(input, boost::size(input));
@@ -227,7 +227,7 @@ BOOST_AUTO_TEST_CASE(hex3) {
 }
 
 BOOST_AUTO_TEST_CASE(not_found) {
-	unsigned char input[] = {0, 0, 0, 14, 1, 13, 0, 0, 0, 11, 0, 2, 4, 4, 0, 0, 0, 13, 0, 1, 2};
+	unsigned char input[] = {0, 0, 0, 14, 1, 15, 0, 0, 0, 11, 0, 2, 4, 4, 0, 0, 0, 13, 0, 1, 2};
 	std::vector<unsigned char> output_find_22 = {};
 
 	Tlv o(input, boost::size(input));
