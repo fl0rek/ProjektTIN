@@ -51,8 +51,8 @@ bool libnet_send(const unsigned char tag, const size_t length,
  * @param length
  * 	provided buffer length
  */
-ssize_t libnet_wait_for_tag(const unsigned char tag, unsigned char *buffer,
-		size_t length) __attribute__((warn_unused_result));
+ssize_t libnet_wait_for_tag(const unsigned char tag, unsigned char *buffer, const size_t length,
+		const bool block) __attribute__((warn_unused_result));
 
 /**
  * @brief

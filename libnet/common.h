@@ -3,7 +3,6 @@
 #include <semaphore.h>
 #include <stdbool.h>
 #include <stdlib.h>
-#include <sys/types.h>
 
 #define HEADER_LEN 2
 typedef struct {

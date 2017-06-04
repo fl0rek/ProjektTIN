@@ -85,10 +85,13 @@ available_tag_t* get_available_tags_struct(unsigned char tag) {
 	return 0;
 }
 
+
 bool libnet_init(const unsigned char *tags_to_register,
 		const unsigned tags_to_register_number) {
 	available_tags = malloc(tags_to_register_number * sizeof * available_tags);
 	check_mem(available_tags);
+
+	signal(SIGPIPE, SIG_IGN);
 
 	for(unsigned i = 0; i < tags_to_register_number; i++) {
 		debug("initializing %x tag semaphore", tags_to_register[i]);
@@ -153,6 +156,7 @@ ssize_t libnet_wait_for_tag(const unsigned char tag, unsigned char *buffer, cons
 	ssize_t message_length;
 	if(msg->length < SSIZE_MAX) {
 		message_length = (ssize_t) msg->length;
+		debug("msg->length: %d %u", msg->length, message_length);
 	} else {
 		log_err1("Message longer than SSIZE_MAX");
 		goto error;
@@ -191,7 +195,7 @@ error:
 static void handle_echo_message(client_info *client, tlv *message, bool reply) {
 	UNUSED(message);
 	debug1("Handle echo");
-	client->retries = CLIENT_MAX_RETRIES;
+	client->retries = 0;
 	if(reply) {
 		check1(send_tag(client, TAG_OK, 0, 0), "Echo response");
 	}
@@ -312,7 +316,7 @@ bool handle_message(client_info *client, tlv *message) {
 
 bool send_tag(client_info const * client, const unsigned char tag,
 		const size_t length, const unsigned char * value) {
-	debug("Sending tag %x", tag);
+	debug("Sending tag %x to %d", tag, client->fd);
 	unsigned char * buff = malloc(HEADER_LEN + length);
 	buff[0] = tag;
 	buff[1] = (unsigned char) length;
@@ -323,7 +327,7 @@ bool send_tag(client_info const * client, const unsigned char tag,
 
 	while(offset < total_length) {
 		ssize_t sent;
-		check1((sent = send(client->fd, buff + offset, total_length - offset, 0)), "send");
+		check1((sent = send(client->fd, buff + offset, total_length - offset, 0)) > 0, "send");
 		offset += (size_t) sent;
 	}
 	return true;

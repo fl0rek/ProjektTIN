@@ -46,15 +46,28 @@ namespace tag {
 		// 	server -> client
 		// 	client -> game
 		constexpr unsigned char step[] = { 0x12, 0x00, 0x00, 0x03 };
-		// validity of last sent step
+		// validity of last sent step should contain 1 byte with 1/0
 		// valid usages:
 		// 	game -> server
-		constexpr unsigned char step_response[] = { 0x12, 0x00, 0x00, 0x03 };
+		// 	server -> client (if client sends invalid move)
+		constexpr unsigned char step_response[] = { 0x12, 0x00, 0x00, 0x04 };
+
+		// add user to game
+		// valid usages:
+		// 	server -> game
+		// 	server -> client
+		constexpr unsigned char add_client[] = { 0x12, 0x00, 0x00, 0x05 };
+
+		// start game, game should respond with `step` I guess
+		// valid usages:
+		// 	server -> game
+		constexpr unsigned char start_game[] = { 0x12, 0x00, 0x00, 0x06 };
 	}
 	constexpr unsigned char chat = 0x13;
 	namespace chat_tags {
 		constexpr unsigned char nick[] = { 0x13, 0x00, 0x00, 0x01 };
 		//TODO(Szymon? ktos od chatu anyway)
+		constexpr unsigned char message[] = { 0x13, 0x00, 0x00, 0x02 };
 	}
 }
 #else

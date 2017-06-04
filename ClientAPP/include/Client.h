@@ -73,8 +73,8 @@ class Client
 		const bool kGameMode = 1;
 		const bool kChatMode = 0;
 		static const ssize_t kReceiveBufferSize = 1000;
-		const char kGameApp[16] = "../GameAPP/Game";
-		const char kChatApp[19] = "../ChatAPP/chatAPP";
+		const char kGameApp[16] = "GameAPP/Game";
+		const char kChatApp[19] = "ChatAPP/chatAPP";
 
 		char session_key_[32];
 		int app_pid_;
