@@ -1,6 +1,18 @@
 #pragma once
 
-#define _GNU_SOURCE 201112L
+#define XSTR(x) STR(x)
+#define STR(x) #x
+
+#if !defined _GNU_SOURCE || _GNU_SOURCE == 1
+# define _GNU_SOURCE 201112L
+#else
+# if _GNU_SOURCE == 201112L
+//ok
+# else
+#  pragma message "_GNU_SOURCE = " XSTR(_GNU_SOURCE)
+#  error Somebody was messing with our _GNU_SOURCE
+# endif
+#endif
 
 #include <stdbool.h>
 #include <stdlib.h>

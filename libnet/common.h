@@ -1,5 +1,19 @@
 #pragma once
 
+#define XSTR(x) STR(x)
+#define STR(x) #x
+
+#if !defined _GNU_SOURCE || _GNU_SOURCE == 1
+# define _GNU_SOURCE 201112L
+#else
+# if _GNU_SOURCE == 201112L
+//ok
+# else
+#  pragma message "_GNU_SOURCE = " XSTR(_GNU_SOURCE)
+#  error Somebody was messing with our _GNU_SOURCE
+# endif
+#endif
+
 #include <semaphore.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -19,7 +33,7 @@ typedef struct {
 	sem_t number;
 } available_tag_t;
 
-#pragma message "This is not strictly C99 but works and is awfully convenient"
+//#pragma message "This is not strictly C99 but works and is awfully convenient"
 typedef struct {
 	unsigned char tag;
 	size_t length;
@@ -82,12 +96,11 @@ int notify_selfpipe(int selfpipe_write_end);
 
 void hexDump(char *desc, void *addr, int len);
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic warning "-Wredundant-decls"
 bool libnet_init(const unsigned char *tags_to_register,
 		const unsigned tags_to_register_number)
 	__attribute__((warn_unused_result));
-#pragma GCC diagnostic pop
+
+bool libnet_wait_for_new_message();
 
 #ifdef _DEBUG
 char const * state_to_string(int status);

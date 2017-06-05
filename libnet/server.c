@@ -1,6 +1,7 @@
 #include "server.h"
 
-#define _GNU_SOURCE 201112L
+#include "common.h" // needs to be first, it's setting up _GNU_SOURCE
+
 #define _POSIX_C_SOURCE
 #define _XOPEN_SOURCE
 
@@ -22,7 +23,6 @@
 #include <tags.h>
 #include <unistd.h>
 
-#include "common.h"
 
 
 #define MAX_CLIENT_NUMBER 100
@@ -156,7 +156,7 @@ static void add_fd_to_select(int fd) {
 	FD_SET(fd, &sockets);
 }
 
-void select_clients_fd() {
+static void select_clients_fd() {
 	for(unsigned i = 0; i < MAX_CLIENT_NUMBER; i++) {
 		if(clients[i].state != STATE_NONE) {
 			debug("selecting %d", clients[i].fd);
@@ -181,6 +181,7 @@ static void close_master_socket(void) {
 }
 
 static void close_master_socket_signal(int signum) {
+	UNUSED(signum);
 	close_master_socket();
 }
 
@@ -235,7 +236,9 @@ error:
 
 static void* libnet_main_pthread_wrapper(void * args) {
 	//TODO(florek) return value!
-	libnet_main(*(int *)args);
+	int *exit_status = malloc(sizeof exit_status);
+	*exit_status = libnet_main(*(int *)args);
+	pthread_exit((void*)exit_status);
 	return 0;
 }
 
@@ -243,7 +246,7 @@ pthread_t libnet_thread;
 
 bool libnet_thread_start(int port) {
 	//TODO(florek) better error handling?
-	const char **params = malloc(sizeof port);
+	int *params = malloc(sizeof port);
 	check_mem(params);
 	*params = port;
 	check1(!pthread_create(&libnet_thread, 0, libnet_main_pthread_wrapper, params),
@@ -258,8 +261,10 @@ bool libnet_thread_shutdown() {
 	check1(notify_selfpipe(selfpipe_write_end) >= 0, "selfpipe write");
 	//TODO(florek) error handling
 	//TODO(florek) return val hadnling
-	check1(!pthread_join(libnet_thread, 0), "pthread_join libnet_thread");
-	return true;
+	int *exit_status;
+	check1(!pthread_join(libnet_thread, (void**)&exit_status), "pthread_join libnet_thread");
+
+	return !exit_status;
 error:
 	return false;
 }
@@ -290,14 +295,16 @@ bool libnet_send(const unsigned char tag, const size_t length,
 bool libnet_send_to(const int client_id, const unsigned char tag,
 		const size_t length, const unsigned char *value) {
 	client_info *client = get_client_by_fd(client_id);
+	if(!client || client->state != STATE_READY)
+		return false;
 	return send_tag(client, tag, length, value);
 }
 
 tlv* append_client_data(client_info *client, tlv *message) {
 	char client_id[TAG_SIZE + 2 + sizeof(int)];
 	memcpy(client_id, tag_internal_client_id, sizeof(tag_internal_client_id));
-	client_id[TAG_SIZE] = sizeof(client->fd);
-	client_id[TAG_SIZE+1] = 1; // because for some reason we need some flippin flag
+	client_id[TAG_SIZE] = 0; // because for some reason we need some flippin flag
+	client_id[TAG_SIZE+1] = sizeof(client->fd);
 	memcpy(client_id + TAG_SIZE + 2, &client->fd, sizeof(client->fd));
 
 	size_t old_length = message->length;

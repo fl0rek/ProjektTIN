@@ -156,7 +156,7 @@ ssize_t libnet_wait_for_tag(const unsigned char tag, unsigned char *buffer, cons
 	ssize_t message_length;
 	if(msg->length < SSIZE_MAX) {
 		message_length = (ssize_t) msg->length;
-		debug("msg->length: %d %u", msg->length, message_length);
+		debug("msg->length: %lu %lu", msg->length, message_length);
 	} else {
 		log_err1("Message longer than SSIZE_MAX");
 		goto error;
@@ -330,8 +330,11 @@ bool send_tag(client_info const * client, const unsigned char tag,
 		check1((sent = send(client->fd, buff + offset, total_length - offset, 0)) > 0, "send");
 		offset += (size_t) sent;
 	}
+
+	free(buff);
 	return true;
 error:
+	free(buff);
 	return false;
 }
 
