@@ -1,3 +1,8 @@
+/*
+ * 					HEADER_HEAD
+ * author: Mikolaj Florkiewicz
+ * 					HEADER_TAIL
+ */
 #pragma once
 
 #define XSTR(x) STR(x)

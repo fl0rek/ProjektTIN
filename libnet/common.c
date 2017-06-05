@@ -1,3 +1,8 @@
+/*
+ * 					HEADER_HEAD
+ * author: Mikolaj Florkiewicz
+ * 					HEADER_TAIL
+ */
 #include "common.h"
 
 #include <arpa/inet.h>

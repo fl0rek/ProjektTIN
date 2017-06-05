@@ -1,3 +1,8 @@
+/*
+ * 					HEADER_HEAD
+ * author: Mikolaj Florkiewicz
+ * 					HEADER_TAIL
+ */
 #include "server.h"
 
 #include "common.h" // needs to be first, it's setting up _GNU_SOURCE
