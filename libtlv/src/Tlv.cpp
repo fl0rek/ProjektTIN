@@ -17,7 +17,7 @@ Tlv::TlvNode::~TlvNode() {
 	delete[] data_;
 }
 
-Tlv::TlvNode::TlvNode(const unsigned int tag, const unsigned char gsize) : tag_(tag), size_(0), global_size_(gsize), 
+Tlv::TlvNode::TlvNode(const unsigned int tag, const unsigned char gsize) : tag_(tag), size_(0), global_size_(gsize),
 	data_(nullptr), next_sibling_(nullptr), first_child_(nullptr)
 {}
 
@@ -53,7 +53,7 @@ void Tlv::deleteNode(const TlvNode * const node) {
 
 bool Tlv::isDataProper(const unsigned char size, const unsigned char * const data) const {
 	int i = 0;
-	
+
 	while(i + kHeaderOffset < size) {
 		if(data[i + kEmbeddedTagsFlagPos]) {
 			if(!isDataProper(data[i + kSizePos], data + i + kHeaderOffset))
@@ -66,7 +66,7 @@ bool Tlv::isDataProper(const unsigned char size, const unsigned char * const dat
 			return true;
 
 		i += kHeaderOffset + data[i + kSizePos];
-	
+
 	}
 
 	return false;
