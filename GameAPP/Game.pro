@@ -12,8 +12,8 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 TARGET = Game
 TEMPLATE = app
-CONFIG  += c++11
-QMAKE_CXXFLAGS += -std=c++11
+CONFIG  += c++14
+QMAKE_CXXFLAGS += -std=c++14
 INCLUDEPATH += /usr/include/boost/ ../libtlv/include/ ../include
 LIBS += -L/usr/include/boost -lboost_serialization
 #QMAKE_POST_LINK += ./GameApp/Tests

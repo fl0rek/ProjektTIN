@@ -14,8 +14,8 @@
 
 class Game
 {
+    enum Mode {CLIENT, SERVER};
 public:
-    enum MessageType {NO_TYPE, PASS_CARD, EXCHANGE, END_GAME, GS_REQUEST, ADD_PLAYER, SERVER_START, INITIALIZE, INIT_FROM_GS, CLIENT_START, UPDATE, TERMINATE};
     class Deck
     {
     public:
@@ -181,7 +181,8 @@ private:
     const static int kMaxPlayers = 12;
     GameState gameState;
     Player *player;
-
+    char playerId = -1;
+    Mode mode;
     /**
      * @brief initialize
      *      creates new deck and initializes it
@@ -266,13 +267,7 @@ public:
      */
     Game(GameState gameState);
 
-    /**
-     * @brief Game
-     *      invokes initialize and creates a player for local player
-     * @param id
-     *      local player id
-     */
-    Game(char id);
+    Game(int m);
 
     /**
      * @brief addPlayer
@@ -322,7 +317,7 @@ public:
      *      serializes given Message and sends it on stdout
      * @param gs
      */
-    void sendMessage(Message msg, unsigned char *t);
+    void sendMessage(Message msg, const unsigned char *t);
 
     /**
      * @brief serialize
@@ -354,12 +349,14 @@ public:
     std::vector<Card> getPlayersCards();
     short getCurrentPlayerIndex();
     Player *getCurrentPlayer();
-    Player *getPlayer();
-    void setPlayer();
+    char getPlayerId();
+    void setPlayerId(char c);
     std::vector<Player*> getPlayers() const;
     bool getIsFinished() const;
     Card getFloatingCard() const;
     Deck getDeck() const;
+    Player *getPlayer() const;
+    void setPlayer(Player *value);
 };
 
 #endif // GAME_H
