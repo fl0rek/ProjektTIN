@@ -61,11 +61,11 @@ char* MainWindow::prepareMessage(QString msg)
 
 void MainWindow::sendToPipe(Message msg)
 {
-    /*Tlv buffer;
+    Tlv buffer;
     buffer.add(tag::chat_tags::message, 0, serialize(msg).size(), reinterpret_cast<const unsigned char*>(serialize(msg).c_str()));
     std::vector<unsigned char> full_data = buffer.getAllData();
-    for_each(full_data.begin(), full_data.end(), [](auto c){std::cout << c;});*/
-    std::cout<<serialize(msg)<<std::endl;
+    for_each(full_data.begin(), full_data.end(), [](unsigned char c){std::cout << c;});
+    std::cout<<serialize(msg)<<std::endl;auto
 }
 
 void MainWindow::readFromPipe(std::string message)
@@ -117,14 +117,17 @@ void MainWindow::setText()
         }
         for(auto it = chat.begin(); it != chat.end(); it++)
         {
-           /* Tlv buffor = Tlv(reinterpret_cast<const unsigned char*>(*it->c_str()), sizeof(*it));
+            unsigned char data[it->size()];
+            for(int i = 0; i < it->size(); ++i)
+                data[i] = static_cast<unsigned char>(static_cast<unsigned int>((*it)[i]));
+
+            Tlv buffor = Tlv(data, it->size());
             std::vector<unsigned char> tmp;
             tmp = buffor.getTagData(tag::chat_tags::message);
-            std::string sName(reinterpret_cast<char*> (tmp.data()));
-            */
-            Message msg = deserialize(*it);
+            std::string str((char*) tmp.data(), tmp.size());
+            Message msg = deserialize(str);
             QString toDisplay = QString::fromStdString(msg.user) + "(" +QString::fromStdString(msg.time) + "): "+
-                    QString::fromStdString(msg.m);
+            QString::fromStdString(msg.m);
             ui->textBrowser->append(toDisplay);
 
         }
