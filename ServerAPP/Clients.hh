@@ -60,15 +60,15 @@ public:
 	}
 
 	virtual void notify(const unsigned  char tag[4], size_t length, unsigned char *value) {
-		if(util::tag_equal(tag, tag::game_tags::resync_response)) {
-			for(const int client_id : requested_whole_replay) {
-				std::lock_guard<std::mutex> lock{libnet_mutex};
-				if(!libnet_send_to(client_id, tag::game, length, value)) {
-					log_warn("Could not send resync response to some clients, they'll probably rerequest?");
-				}
-			}
+//		if(util::tag_equal(tag, tag::game_tags::resync_response)) {
+//			for(const int client_id : requested_whole_replay) {
+//				std::lock_guard<std::mutex> lock{libnet_mutex};
+//				if(!libnet_send_to(client_id, tag::game, length, value)) {
+//					log_warn("Could not send resync response to some clients, they'll probably rerequest?");
+//				}
+//			}
 
-		}
+//		}
 
 		if(util::tag_equal(tag, tag::game_tags::step)) {
 			if(!libnet_send(tag::game, length, value)) {

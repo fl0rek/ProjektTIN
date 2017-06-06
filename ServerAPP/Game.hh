@@ -37,8 +37,8 @@ void handle_reader(int read_handle) {
 		// this is fucking retarted
 		unsigned char * buffer = new unsigned char[message_length];
 		memcpy(&buffer[0], tag, 4);
-		memcpy(&buffer[4], tag_length, 1);
-		memcpy(&buffer[5], flipping_flag, 1);
+		memcpy(&buffer[4], flipping_flag, 1);
+		memcpy(&buffer[5], tag_length, 1);
 		memcpy(&buffer[6], body, tag_length[0]);
 
 		notify_observers(tag, message_length, buffer);
