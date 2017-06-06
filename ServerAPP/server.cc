@@ -77,7 +77,8 @@ void handle_chat_message(const unsigned char* buffer, const size_t length) {
 
 	const char *name = c.getName().c_str();
 
-	chat_data.add(tag::chat_tags::nick, 0, strlen(name), reinterpret_cast<const unsigned char*>(name));
+	chat_data.add(tag::chat_tags::nick, 0, strlen(name),
+			reinterpret_cast<const unsigned char*>(name));
 
 	{
 		std::lock_guard<std::mutex> lock{libnet_mutex};
@@ -125,23 +126,33 @@ void handle_internal_message(const unsigned char* buffer, const size_t length) {
 
 	if(c.isUnauthenticated()) {
 		try {
-			if(util::tag_exists(internal_data.getTagData(tag::internal_tags::authentication_code))) {
+			if(util::tag_exists(internal_data.getTagData(
+					tag::internal_tags::authentication_code))) {
+
 				uint64_t key = util::extract_tag<uint64_t>(
-						internal_data.getTagData(tag::internal_tags::authentication_code));
+					internal_data.getTagData(
+						tag::internal_tags::authentication_code));
+
 				c.authenticate(authentication::try_authenticate(key));
 			} else {
 				std::string name = reinterpret_cast<char*>(
-						&internal_data.getTagData(tag::internal_tags::requested_name)[0]);
+					&internal_data.getTagData(
+						tag::internal_tags::requested_name)[0]);
 				c.authenticate(Clients::Client::Chatter, name);
 			}
 		} catch(TlvException) {
 			log_warn("Malformed internal message from %d", client_id);
-			// no need for error handling,client will be unathenticated so error message is sent back
+			// no need for error handling,
+			// client will be unathenticated so error message is sent back
 		}
 		if(c.isUnauthenticated()) {
 			libnet_helper::sendAuthError(client_id);
 			return;
 		}
+		if(c.isPlayer()) {
+			libnet_helper::sendPlayerHisId(client_id);
+		}
+
 	}
 }
 
@@ -226,7 +237,6 @@ int main(int argc, char* argv[]) {
 		ssize_t buffer_len;
 		unsigned char buffer[256];
 		memset(buffer, 0, sizeof buffer);
-
 
 		buffer_len = libnet_wait_for_tag(tag::internal, buffer, sizeof(buffer), false);
 		if(buffer_len > 0) {
