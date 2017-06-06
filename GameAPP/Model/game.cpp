@@ -327,6 +327,14 @@ void Game::setPlayer(Player *value)
     player = value;
 }
 
+std::vector<unsigned> Game::getPlayersIds()
+{
+    std::vector<unsigned> playersIds;
+    for(Player *p : gameState.players)
+        playersIds.insert(playersIds.begin(), p->getId());
+    return playersIds;
+}
+
 void Game::initialize()
 {
     gameState.deck = Deck();
