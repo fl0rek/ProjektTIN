@@ -195,11 +195,7 @@ void inline Client::sendToChat(const unsigned char * const data, const ssize_t s
 bool inline Client::sendToServer(const unsigned char tag, const unsigned char * const data
 	, const ssize_t size) const noexcept
 {
-	//TODO
-	Tlv buffer;// get rid of this Tlv, chat and game should use it
-	buffer.add(0x88, 0 , size, data);
-	std::vector<unsigned char> full_buffer = buffer.getAllData();
-	return libnet_send(tag, full_buffer.size(), full_buffer.data());
+	return libnet_send(tag, size - 1, data);
 }
 
 void Client::receiveFromApp() noexcept
@@ -270,7 +266,7 @@ void Client::receiveFromServer() noexcept
 		if((size = libnet_wait_for_tag(tag::game, data, kReceiveBufferSize, false)) > 0) 
 			sendToGame(data, size);
 		else if((size = libnet_wait_for_tag(tag::chat, data, kReceiveBufferSize, false)) > 0)
-			sendToChat(data + 6, size - 17); //TODO change this, Tlv should bu used by chat to perform this operation
+			sendToChat(data, size); 
 		else if((size = libnet_wait_for_tag(tag::internal, data, kReceiveBufferSize, false)) > 0)
 		{
 			;

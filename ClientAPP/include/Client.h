@@ -64,7 +64,6 @@ class Client
 		void setNonblockPipes();
 		void connectToServer(const  char * const address, 
 				const  char * const service);
-		void requestGameSynchronisation();
 		void inline sendToGame(const unsigned char * const data,
 				const ssize_t size) const;
 		void inline sendToChat(const unsigned char * const data,
