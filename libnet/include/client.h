@@ -83,3 +83,10 @@ bool libnet_thread_shutdown();
  * 	block until any new message becomes available
  */
 bool libnet_wait_for_new_message();
+
+/**
+ * @brief
+ * 	wait till libnet init is finished
+ */
+bool libnet_wait_for_initialization_finish();
+
