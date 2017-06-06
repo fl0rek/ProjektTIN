@@ -2,12 +2,12 @@
 
 #include <QString>
 
-std::vector<std::string> getPlayersNicks(const std::vector<Player*> v)
+std::vector<short> getPlayersIds(const std::vector<Player*> v)
 {
-    std::vector<std::string> nicks;
+    std::vector<short> ids;
     for(Player *p : v)
-        nicks.insert(nicks.begin(), p->getNick());
-    return nicks;
+        ids.insert(ids.begin(), p->getId());
+    return ids;
 }
 
 std::string trim(std::string s)

@@ -6,4 +6,4 @@ HEADERS += \
 SOURCES += \
     $$PWD/player.cpp \
     $$PWD/game.cpp \
-    $$PWD/card.cpp
+    $$PWD/card.cpp \

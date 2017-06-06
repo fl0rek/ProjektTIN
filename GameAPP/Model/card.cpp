@@ -8,3 +8,8 @@ bool compare(Card c1, Card c2)
         return false;
     return true;
 }
+
+unsigned char *serialize()
+{
+
+}

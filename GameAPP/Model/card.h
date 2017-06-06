@@ -9,7 +9,7 @@
  * Card represents a pair of enums Rank and Suit
  */
 
-enum Rank {
+enum Rank : char {
     ACE,
     TWO,
     THREE,
@@ -26,7 +26,7 @@ enum Rank {
     NO_RANK
 };
 
-enum Suit {
+enum Suit : char {
 	HEARTS,
 	DIAMONDS,
 	CLUBS,

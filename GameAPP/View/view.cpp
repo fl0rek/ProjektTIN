@@ -34,7 +34,7 @@ void View::drawLabel(unsigned x, unsigned y, std::string text)
 }
 
 
-void View::drawCardsLine(unsigned ammount, std::vector<std::string> &nicks, View::Position p)
+void View::drawCardsLine(unsigned ammount, std::vector<short> &ids, View::Position p)
 {
     if(ammount > 3)
         return;
@@ -78,8 +78,8 @@ void View::drawCardsLine(unsigned ammount, std::vector<std::string> &nicks, View
             drawCard(beginX + j * dx, beginY + j * dy, p, false);
             if(j == 2)
             {
-                drawLabel(textX, textY, nicks.back());
-                nicks.pop_back();
+                drawLabel(textX, textY, std::to_string(ids.back()));
+                ids.pop_back();
             }
         }
         beginX += 5*dx;
@@ -95,16 +95,16 @@ void View::drawCardsLine(unsigned ammount, std::vector<std::string> &nicks, View
 }
 
 
-void View::drawCards(std::vector<std::string> nicks)
+void View::drawCards(std::vector<short> ids)
 {
     int i = 0;
     int players = game->getPlayers().size();
     while(players > 0)
     {
         if(players >= 3)
-            drawCardsLine(3, nicks, static_cast<Position>(i));
+            drawCardsLine(3, ids, static_cast<Position>(i));
         else
-            drawCardsLine(players, nicks, static_cast<Position>(i));
+            drawCardsLine(players, ids, static_cast<Position>(i));
         i++;
         players -= 3;
     }
@@ -235,7 +235,7 @@ View::~View()
 void View::start()
 {
     game->start();
-    drawCards(getPlayersNicks(game->getPlayers()));
+    drawCards(getPlayersIds(game->getPlayers()));
     drawButtons();
     update();
 }

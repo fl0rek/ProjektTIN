@@ -73,7 +73,7 @@ class View : public QGraphicsView
      * @param p
      *      position
      */
-    void drawCardsLine(unsigned ammount, std::vector<std::string> &nicks, Position p);
+    void drawCardsLine(unsigned ammount, std::vector<short> &Ids, Position p);
 
     /**
      * @brief drawCards
@@ -81,7 +81,7 @@ class View : public QGraphicsView
      * @param nicks
      *      players nicks
      */
-    void drawCards(std::vector<std::string> nicks);
+    void drawCards(std::vector<short> nicks);
 
     /**
      * @brief drawButtons

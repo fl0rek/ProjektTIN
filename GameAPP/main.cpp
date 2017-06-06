@@ -1,6 +1,7 @@
 #include "Model/game.h"
 #include "View/view.h"
 #include "debug.h"
+#include "Tlv.h"
 
 #include <QApplication>
 #include <iostream>
@@ -8,6 +9,7 @@
 #include <unistd.h>
 #include <string>
 #include <QDebug>
+#include <cstdlib>
 
 
 /* TODO
@@ -37,11 +39,10 @@ void *gameApp(void *ptr)
     data = (struct threadData*)ptr;
     int argc = data->argc;
     char *argv = data->argv;
-
     QApplication a(argc, &argv);
     a.setApplicationName("Game");
     if(user == 1)
-       g = new Game(std::string(data->argv));
+       g = new Game(atoi(data->argv));
     else
        g = new Game();
     if(user != 2)
@@ -76,6 +77,7 @@ void *reader(void *)
 
 int main(int argc, char *argv[])
 {
+	g = new Game();
     if(argc > 1)
         user = static_cast<int>(*argv[1]) - 48;
     switch(argc)
