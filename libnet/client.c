@@ -15,10 +15,9 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
-
 client_info server[1];
 
-inline unsigned get_client_id(client_info *client) {
+unsigned get_client_id(client_info *client) {
 	UNUSED(client);
 	return 0;
 }
@@ -59,9 +58,11 @@ error:
 
 static void notify_libnet_read() {
 	libnet_init_finished = true;
-	(pthread_mutex_lock(&libnet_ready_mutex), "lock libnet_ready_mutex");
-	(pthread_cond_signal(&libnet_ready), "libnet_ready signal");
-	(pthread_mutex_unlock(&libnet_ready_mutex), "unlock libnet_ready_mutex");
+
+	pthread_mutex_lock(&libnet_ready_mutex);
+	pthread_cond_signal(&libnet_ready);
+	pthread_mutex_unlock(&libnet_ready_mutex);
+
 }
 
 bool exiting = false;
