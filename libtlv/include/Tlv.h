@@ -65,6 +65,10 @@ class Tlv {
 		 *		vector with header + data of every element
 		*/
 		std::vector<unsigned char> getAllData() const;
+		
+		bool isTagPresent(const unsigned int tag) const;
+
+		bool isTagPresent(const unsigned char tag[4]) const;
 
 		static unsigned int getTag(const unsigned char a, const unsigned char b,
 				const unsigned char c, const unsigned char d);
