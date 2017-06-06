@@ -51,6 +51,8 @@ namespace tag {
 		// 	game -> server
 		// 	server -> client (if client sends invalid move)
 		constexpr unsigned char step_response[] = { 0x12, 0x00, 0x00, 0x04 };
+		constexpr unsigned char terminate[] = { 0x15, 0x00, 0x00, 0x04 };
+		constexpr unsigned char invalid_step[] = { 0x16, 0x00, 0x00, 0x04 };
 
 		// add user to game
 		// valid usages:
