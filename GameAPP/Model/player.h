@@ -14,18 +14,7 @@
 
 class Player
 {
-    friend class boost::serialization::access;
-    template<class Archive>
-    void serialize(Archive & ar, const unsigned int )
-    {
-        ar & nick;
-        ar & cards;
-        ar & lastCard;
-        ar & win;
-        ar & canExchange;
-    }
-
-    std::string nick;
+    unsigned id;
     std::vector<Card> cards;
     Card lastCard;
 	bool win = false;
@@ -42,7 +31,7 @@ public:
      *      creates a player with given nick/id
      * @param nick
      */
-    Player(std::string nick);
+    Player(unsigned id);
 
     /**
      * @brief Player
@@ -50,7 +39,7 @@ public:
      * @param nick
      * @param cards
      */
-    Player(std::string nick, std::vector<Card> cards);
+    Player(unsigned id, std::vector<Card> cards);
 
     /**
      * @brief giveCard
@@ -85,9 +74,10 @@ public:
      */
     bool hasThree();
 
+    std::vector<unsigned char> serialize();
 
-    std::string getNick() const;
-	void setNick(const std::string &value);
+    unsigned getId() const;
+    void setId(unsigned value);
     std::vector<Card> getCards() const;
 	void setCards(const std::vector<Card> &value);
 	Card getLastCard();

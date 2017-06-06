@@ -6,7 +6,7 @@ std::vector<std::string> getPlayersNicks(const std::vector<Player*> v)
 {
     std::vector<std::string> nicks;
     for(Player *p : v)
-        nicks.insert(nicks.begin(), p->getNick());
+        nicks.insert(nicks.begin(), std::to_string(p->getId()));
     return nicks;
 }
 

@@ -8,16 +8,16 @@
 #include <unistd.h>
 #include <string>
 #include <QDebug>
-
+#include <string>
 
 /* TODO
  * check game->isValid()
- * game-server communication
- * game-client communication
+ * check game-server communication
+ * check game-client communication
  *
  * test if view is working properly with message sending
  * documentation
- * code refactor
+ * code refactor // get rid of unnecessary functions
  */
 
 Game *g;
@@ -40,10 +40,10 @@ void *gameApp(void *ptr)
 
     QApplication a(argc, &argv);
     a.setApplicationName("Game");
-    if(user == 1)
-       g = new Game(std::string(data->argv));
+    if(user == 2)
+        g = new Game(1);
     else
-       g = new Game();
+        g = new Game(0);
     if(user != 2)
         v = new View(g, user);
     a.exec();
@@ -59,16 +59,15 @@ void *reader(void *)
     {
         int x = read(STDIN_FILENO, message, 256);
         std::string msg(message, x);
-        msg = trim(msg);
-        //TODO game-server game-client proper communication
-        if(msg != "")
-        {
-            g->acceptMessage(msg);
-            if(user != 2)
-                v->update();
-        }
-        for(unsigned i = 0; i < msg.size(); i++)
-            message[i] = ' ';
+
+        unsigned char data[msg.size()];
+        for(int i = 0; i < msg.size(); ++i)
+            data[i] = static_cast<unsigned char>(msg[i]);
+        Tlv buffer = Tlv(data, msg.size());
+
+        g->acceptMessage(buffer);
+        if(user != 2)
+            v->update();
     }
     pthread_exit(0);
 }
