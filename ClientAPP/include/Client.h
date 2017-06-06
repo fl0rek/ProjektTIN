@@ -10,13 +10,14 @@ extern "C" {
 #include <client.h>
 }
 
-#include "Exceptions.h"
-#include "libnet/common.h"
-#include "include/tags.h"
+#include <Exceptions.h>
+#include <libnet/common.h>
+#include <include/tags.h>
 #include <Tlv.h> 
 
 #include <unistd.h>
 #include <string.h>
+#include <mutex>
 
 constexpr unsigned char tags_to_register[] = {tag::internal, tag::game, tag::chat};
 
@@ -35,7 +36,7 @@ class Client
 		 *		key to authorize gamer
 		*/
 		Client(const char * const address, const char * const service, 
-				const char * const session_key);
+				uint64_t session_key);
 		/**
 		 * @brief
 		 *		constructs Client object in viewer mode	
@@ -46,19 +47,24 @@ class Client
 		*/
 		Client(const char * const address, const char * const service);
 
-		//TODO make them private, add public run method
-		void receiveFromApp() noexcept;
-		void receiveFromServer() noexcept;
+		/**
+		 * @brief
+		 *		client starts receiving messages from server and from app	
+		*/
+		void run();
 
 	private:
-		bool startChatApp() noexcept;
-		bool startGameApp() noexcept;
-		void changeToViewerMode() noexcept;
-		bool createPipes() noexcept; 
-		bool createGameAppPipes() noexcept;
-		bool createChatAppPipes() noexcept;
-		bool connectToServer(const  char * const address, 
-				const  char * const service) noexcept;
+		void receiveFromApp(std::mutex * const end_mutex, bool * const end_flag) noexcept;
+		void receiveFromServer(std::mutex * const end_mutex, bool * const end_flag) noexcept;
+		void startChatApp();
+		void startGameApp();
+		void changeToViewerMode();
+		void createPipes();
+		void createGameAppPipes();
+		void createChatAppPipes(); 
+		void setNonblockPipes();
+		void connectToServer(const  char * const address, 
+				const  char * const service);
 		void requestGameSynchronisation();
 		void inline sendToGame(const unsigned char * const data, 
 				const ssize_t size) const;
@@ -66,24 +72,28 @@ class Client
 				const ssize_t size) const;
 		bool inline sendToServer(const unsigned char tag, 
 			const unsigned char * const data, const ssize_t size) const noexcept;
-		void receiveFromGame();
-		void receiveFromChat() const;
+		void receiveFromGame(std::mutex * const end_mutex, bool * const end_flag);
+		void receiveFromChat(std::mutex * const end_mutex, bool * const end_flag);
+		void sendSessionKey() const;
 
 
 		const bool kGameMode = 1;
 		const bool kChatMode = 0;
 		static const ssize_t kReceiveBufferSize = 1000;
-		const char kGameApp[16] = "GameAPP/Game";
-		const char kChatApp[19] = "ChatAPP/chatAPP";
+		char kGameApp[16] = "GameAPP/Game";
+		char kChatApp[19] = "ChatAPP/chatAPP";
+		char * const kChatAppParams[2] = {kChatApp, 0};
+		char * const kGameAppParams[2] = {kGameApp, 0};
+		const bool kClientRun = true;
+		const bool kClientEnd = false;
 
-		char session_key_[32];
-		int app_pid_;
+		uint64_t session_key_;
+		int chat_app_pid_;
+		int game_app_pid_;
 		//TODO change them a little to stop using 0 or 1  
 		int pipefd_game_in_[2];
 		int pipefd_game_out_[2];
 		int pipefd_chat_in_[2];
 		int pipefd_chat_out_[2];
 		bool mode_;
-		unsigned char last_state_[kReceiveBufferSize];
-		ssize_t last_state_size_ = 0;
 };
