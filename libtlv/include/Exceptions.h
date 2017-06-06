@@ -13,7 +13,7 @@ class TlvException : public std::runtime_error
 	public:
 		explicit TlvException(const std::string& what) :
 			std::runtime_error(what) {};
-		
+
 		explicit TlvException(const char* what) :
 			std::runtime_error(what) {};
 
