@@ -41,6 +41,29 @@ void clear_fd_select(int fd) {
 	FD_CLR(fd, &selects);
 }
 
+
+bool libnet_init_finished = false;
+pthread_cond_t libnet_ready = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t libnet_ready_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+bool libnet_wait_for_initialization_finish() {
+	if(libnet_init_finished)
+		return true;
+	check1(!pthread_mutex_lock(&libnet_ready_mutex), "lock libnet_ready_mutex");
+	check1(!pthread_cond_wait(&libnet_ready, &libnet_ready_mutex), "cond_wait libnet_ready");
+	check1(!pthread_mutex_unlock(&libnet_ready_mutex), "unlock libnet_ready_mutex");
+	return true;
+error:
+	return false;
+}
+
+static void notify_libnet_read() {
+	libnet_init_finished = true;
+	(pthread_mutex_lock(&libnet_ready_mutex), "lock libnet_ready_mutex");
+	(pthread_cond_signal(&libnet_ready), "libnet_ready signal");
+	(pthread_mutex_unlock(&libnet_ready_mutex), "unlock libnet_ready_mutex");
+}
+
 bool exiting = false;
 int selfpipe_write_end;
 static int libnet_client_main(const char *address, const char* service) {
@@ -85,6 +108,8 @@ static int libnet_client_main(const char *address, const char* service) {
 
 		check1(send_tag(server, TAG_HELO, 0, 0), "sending hello");
 
+
+		notify_libnet_read();
 		while(!exiting) {
 			log_info1("Waiting for server or selfpipie");
 			//send_tag(server, 0xee, 3, "foo");
