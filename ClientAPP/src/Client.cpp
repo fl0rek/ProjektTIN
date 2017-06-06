@@ -29,6 +29,7 @@ Client::Client(const char * const address, const char * const service, uint64_t 
 	connectToServer(address, service);
 	createPipes();
 //	sendSessionKey();
+//	receiveAuthentication();
 	startGameApp();
 	setNonblockPipes();
 }
@@ -45,8 +46,30 @@ void Client::sendSessionKey() const
 
 	if(!libnet_send(tag::internal, full_data.size(), full_data.data()))
 		throw NetworkError("cant send session key");
+}
 
-//	libnet_
+void Client::receiveAuthentication() const
+{
+	
+	unsigned char data[kReceiveBufferSize];
+	ssize_t size;
+	libnet_wait_for_new_message();
+
+	if((size = libnet_wait_for_tag(tag::internal, data, kReceiveBufferSize, true)) > 0)
+	{
+		Tlv buffer(data, size);
+		if((buffer.getTagData(tag::internal_tags::authentication_error).size() != 0))
+			throw NetworkError("server did not authenticate me");
+		
+	}
+
+	switch(size)
+	{
+		case -ENOTAG:
+		case -EQUEUE:
+		case -ESIZE:
+			throw NetworkError("Libnet reported problem");
+	}
 }
 
 void Client::run()

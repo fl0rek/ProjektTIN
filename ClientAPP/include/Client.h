@@ -75,6 +75,7 @@ class Client
 		void receiveFromGame(std::mutex * const end_mutex, bool * const end_flag);
 		void receiveFromChat(std::mutex * const end_mutex, bool * const end_flag);
 		void sendSessionKey() const;
+		void receiveAuthentication() const;
 
 
 		const bool kGameMode = 1;
