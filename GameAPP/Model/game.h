@@ -359,6 +359,7 @@ public:
     Deck getDeck() const;
     Player *getPlayer() const;
     void setPlayer(Player *value);
+    std::vector<unsigned> getPlayersIds();
 };
 
 #endif // GAME_H
