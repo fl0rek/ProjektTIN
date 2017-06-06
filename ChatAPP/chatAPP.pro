@@ -11,7 +11,7 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 TARGET = chatAPP
 TEMPLATE = app
 CONFIG += console
-INCLUDEPATH += /usr/include/boost
+INCLUDEPATH += /usr/include/boost ../libtlv/include/ ../include/
 QMAKE_CXXFLAGS += -std=c++14
 LIBS += -L/usr/include/boost -lboost_serialization
 # The following define makes your compiler emit warnings if you use

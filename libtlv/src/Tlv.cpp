@@ -14,7 +14,8 @@ Tlv::TlvNode::TlvNode(const unsigned int tag, const unsigned char size, const un
 }
 
 Tlv::TlvNode::~TlvNode() {
-	delete[] data_;
+	if(data_ != nullptr)
+		delete[] data_;
 }
 
 Tlv::TlvNode::TlvNode(const unsigned int tag, const unsigned char gsize) : tag_(tag), size_(0), global_size_(gsize),
@@ -28,6 +29,11 @@ Tlv::Tlv(const unsigned char * const data, const unsigned char size) : head_(nul
 	add(kDummyTag, 1, size, data);
 	TlvNode * old_head = head_;
 	head_ = head_->first_child_;
+	auto tmp = head_;
+	while(tmp->next_sibling_)
+		tmp = tmp->next_sibling_;
+
+	last_ = tmp;
 	delete old_head; // dummy node
 }
 
