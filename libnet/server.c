@@ -70,6 +70,7 @@ static int initialize_server(int port, int connections, const char* address) {
 	}
 
 	struct sockaddr_in6 socket_struct;
+	memset(&socket_struct, 0, sizeof socket_struct);
 	int sock_fd = -1;
 
 
@@ -185,9 +186,10 @@ static void close_master_socket(void) {
 	master_socket_fd = -1;
 }
 
-static void close_master_socket_signal(int signum) {
+static void signal_cleanup(int signum) {
 	UNUSED(signum);
 	close_master_socket();
+	exit(0);
 }
 
 bool exiting = false;
@@ -197,8 +199,8 @@ static int libnet_main(int port) {
 	master_socket_fd = initialize_server(port, MAX_CLIENT_NUMBER, 0);
 	atexit(close_master_socket);
 
-	signal(SIGTERM, close_master_socket_signal);
-	signal(SIGINT, close_master_socket_signal);
+	signal(SIGTERM, signal_cleanup);
+	signal(SIGINT, signal_cleanup);
 
 
 	int selfpipe_fd;
@@ -224,7 +226,9 @@ static int libnet_main(int port) {
 				} else if(i == selfpipe_fd) {
 					char ch;
 					log_info1("Got interrupted by selfpipe");
-					check1(read(selfpipe_fd, &ch, 1) >= 0, "selfpipe read");
+					check_warn1(read(selfpipe_fd, &ch, 1) >= 0,
+							"selfpipe read");
+					// we want selfpipe read errors to be nonfatal
 				} else {
 					handle_client_input(i);
 				}
@@ -232,6 +236,11 @@ static int libnet_main(int port) {
 		}
 
 	}
+
+	for(unsigned i = 0; i < MAX_CLIENT_NUMBER; i++) {
+		client_disconnect(clients + i); // function automatically ignores not connected clients
+	}
+
 	close_master_socket();
 
 	return 0;
