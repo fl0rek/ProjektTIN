@@ -55,21 +55,19 @@ public:
 		return clients[id];
 	}
 
-	void request_while_replay_for_client(int client_id) {
+	void request_whole_replay_for_client(int client_id) {
 		requested_whole_replay.push_back(client_id);
 	}
 
 	virtual void notify(const unsigned  char tag[4], size_t length, unsigned char *value) {
-//		if(util::tag_equal(tag, tag::game_tags::resync_response)) {
-//			for(const int client_id : requested_whole_replay) {
-//				std::lock_guard<std::mutex> lock{libnet_mutex};
-//				if(!libnet_send_to(client_id, tag::game, length, value)) {
-//					log_warn("Could not send resync response to some clients, they'll probably rerequest?");
-//				}
-//			}
-
-//		}
-
+		if(util::tag_equal(tag, tag::game_tags::step)) {
+			for(const int client_id : requested_whole_replay) {
+				std::lock_guard<std::mutex> lock{libnet_mutex};
+				if(!libnet_send_to(client_id, tag::game, length, value)) {
+					log_warn("Could not send resync response to some clients, they'll probably rerequest?");
+				}
+			}
+		}
 		if(util::tag_equal(tag, tag::game_tags::step)) {
 			if(!libnet_send(tag::game, length, value)) {
 				log_warn("Could not send game state to some clients, let's hope they resync on next send or request resync manually");
@@ -84,3 +82,4 @@ private:
 	std::vector<int> requested_whole_replay;
 };
 
+Clients cs;

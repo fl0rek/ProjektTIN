@@ -120,6 +120,17 @@ public:
 	bool handle_game_message(const size_t length, const unsigned char* buffer) {
 		record_to_replay_file(length, buffer);
 
+		Tlv game_data(buffer, length);
+		if(game_data.isTagPresent(tag::game_tags::resync_request)) {
+
+			int client_id = util::get_client_id(game_data);
+
+			if(client_id < 0)
+				return true;
+
+			cs.request_whole_replay_for_client(client_id);
+		}
+
 		size_t written = 0;
 		while(written < length) {
 			ssize_t w =  write(write_handle, buffer + written, length - written);
@@ -154,6 +165,19 @@ public:
 		}
 		return true;
 
+	}
+
+	void add_player(int client_id) {
+		Tlv buffer;
+		buffer.add(tag::game_tags::add_client, 0, 1, 0);
+		buffer.add(tag::internal_tags::client_id, 0, sizeof(client_id), reinterpret_cast<unsigned char*>(&client_id));
+		std::vector<unsigned char> data = buffer.getAllData();
+
+		size_t written = 0;
+		while(written < data.size()) {
+			ssize_t w =  write(write_handle, &data[0] + written, data.size() - written);
+			written += w;
+		}
 	}
 private:
 	int write_handle;

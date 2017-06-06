@@ -32,21 +32,21 @@ namespace tag {
 		// 	client -> server // passthrough
 		// 	server -> game
 		constexpr unsigned char resync_request[] = { 0x12, 0x00, 0x00, 0x01 };
-        
+
 		// move performed by player
 		// valid usages:
 		// 	game -> player client
 		// 	player client -> server
 		// 	server -> game
 		constexpr unsigned char step[] = { 0x12, 0x00, 0x00, 0x02 };
-        
+
 		// invalid last step preformed by client
 		// valid usages:
 		// server game -> server
 		// server -> client // passthrough
         	// client -> client game
 		constexpr unsigned char invalid_step[] = { 0x12, 0x00, 0x00, 0x03 };
-        
+
         	// game has ended
     		// valid usages:
 		// server game -> server
