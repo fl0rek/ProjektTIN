@@ -1,3 +1,8 @@
+/*
+ * 					HEADER_HEAD
+ * author: Mikolaj Florkiewicz
+ * 					HEADER_TAIL
+ */
 #ifndef __dbg_h__
 #define __dbg_h__
 

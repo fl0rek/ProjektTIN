@@ -1,3 +1,8 @@
+/*
+ * 					HEADER_HEAD
+ * author: Mikolaj Florkiewicz
+ * 					HEADER_TAIL
+ */
 #pragma once
 
 #include <stdbool.h>
@@ -55,7 +60,7 @@ ssize_t libnet_wait_for_tag(const unsigned char tag, unsigned char *buffer, cons
  * @brief
  * 	start libnet thread. must be called after init, before any other actions
  */
-bool libnet_thread_start(const char *address);
+bool libnet_thread_start(int port);
 
 /**
  * @brief

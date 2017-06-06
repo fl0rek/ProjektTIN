@@ -12,4 +12,5 @@ add_library(tags STATIC tags.c)
 
 add_subdirectory(libnet)
 add_subdirectory(ServerAPP)
+add_subdirectory(ClientAPP)
 add_subdirectory(libtlv)

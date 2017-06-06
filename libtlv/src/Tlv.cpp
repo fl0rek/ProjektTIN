@@ -1,4 +1,5 @@
 #include "Tlv.h"
+#include "Exceptions.h"
 
 #include <cstring>
 #include <iostream>
@@ -16,8 +17,8 @@ Tlv::TlvNode::~TlvNode() {
 	delete[] data_;
 }
 
-Tlv::TlvNode::TlvNode(const unsigned int tag, const unsigned char gsize) : tag_(tag), next_sibling_(nullptr),
-       	first_child_(nullptr), size_(0), global_size_(gsize), data_(nullptr)
+Tlv::TlvNode::TlvNode(const unsigned int tag, const unsigned char gsize) : tag_(tag), size_(0), global_size_(gsize),
+	data_(nullptr), next_sibling_(nullptr), first_child_(nullptr)
 {}
 
 Tlv::Tlv() : head_(nullptr), last_(nullptr)
@@ -50,6 +51,27 @@ void Tlv::deleteNode(const TlvNode * const node) {
 	delete node;
 }
 
+bool Tlv::isDataProper(const unsigned char size, const unsigned char * const data) const {
+	int i = 0;
+
+	while(i + kHeaderOffset < size) {
+		if(data[i + kEmbeddedTagsFlagPos]) {
+			if(!isDataProper(data[i + kSizePos], data + i + kHeaderOffset))
+				return false;
+		}
+
+		if(i + data[i + kSizePos] + kHeaderOffset > size)
+			return false;
+		else if (i + data[i + kSizePos] + kHeaderOffset == size)
+			return true;
+
+		i += kHeaderOffset + data[i + kSizePos];
+
+	}
+
+	return false;
+}
+
 void Tlv::add(const unsigned char tag[4], const bool embedded_tags_flag, const unsigned char size,
 		const unsigned char * const data) {
 	add(Tlv::getTag(tag), embedded_tags_flag, size, data);
@@ -57,6 +79,9 @@ void Tlv::add(const unsigned char tag[4], const bool embedded_tags_flag, const u
 
 void Tlv::add(const unsigned int tag, const bool embedded_tags_flag, const unsigned char size,
 		const unsigned char * const data) {
+	if(embedded_tags_flag && !isDataProper(size, data)) // if there are no embedded tags then data is just plain data without tags
+		throw TlvException("Bad tlv input");
+
 	if(head_ == nullptr) {
 		addNode(tag, size, data, embedded_tags_flag, &head_);
 		last_ = head_;
@@ -68,12 +93,12 @@ void Tlv::add(const unsigned int tag, const bool embedded_tags_flag, const unsig
 
 }
 
-inline const unsigned int Tlv::getTag(const unsigned char a, const unsigned char b,
+inline unsigned int Tlv::getTag(const unsigned char a, const unsigned char b,
 		const unsigned char c, const unsigned char d) {
 	return static_cast<int>(a<<24 | b<<16 | c<<8 | d);
 }
 
-const unsigned int Tlv::getTag(const unsigned char tag[4]) {
+inline unsigned int Tlv::getTag(const unsigned char tag[4]) {
 	return static_cast<int>(tag[0]<<24 | tag[1]<<16 | tag[2]<<8 | tag[3]);
 }
 
@@ -141,7 +166,6 @@ void Tlv::pushDataToBuffer(const TlvNode * const node, vector<unsigned char> &bu
 }
 //pushes size and calls pushDataToBuffer to push data, usefull when I use getAllData
 void Tlv::pushSizeAndDataToBuffer(const TlvNode * const node, vector<unsigned char> &buffer) const {
-	int size = node->size_;
 	buffer.push_back(node->global_size_);
 	pushDataToBuffer(node, buffer);
 }
@@ -172,7 +196,7 @@ void Tlv::getFullBuffer(const TlvNode * const node, vector<unsigned char> &buffe
 
 }
 
-const Tlv::TlvNode * const Tlv::findNode(const TlvNode * const node, const unsigned int tag) const {
+const Tlv::TlvNode * Tlv::findNode(const TlvNode * const node, const unsigned int tag) const {
 	const TlvNode *return_node;
 
 	if(!node) {

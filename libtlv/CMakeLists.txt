@@ -10,7 +10,7 @@ target_include_directories(tlv PUBLIC
 include_directories(include)
 file(GLOB SOURCES "src/*.cpp")
 
-add_compile_options(-std=c++14)
+add_compile_options(-std=c++14 -Wall -Wextra -Wcast-align -Wmissing-declarations -pedantic)
 find_package(Boost COMPONENTS unit_test_framework REQUIRED)
 
 

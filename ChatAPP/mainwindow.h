@@ -46,6 +46,7 @@ private:
     QString messageToSend;
     pthread_t reader;
 
+
     static std::list<std::string> chat;
 
 };

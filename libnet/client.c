@@ -1,6 +1,11 @@
+/*
+ * 					HEADER_HEAD
+ * author: Mikolaj Florkiewicz
+ * 					HEADER_TAIL
+ */
 #include "client.h"
 
-#define _GNU_SOURCE 201112L
+#include "common.h" // needs to be first, it's setting up _GNU_SOURCE
 
 #include <arpa/inet.h>
 #include <fdebug.h>
@@ -10,7 +15,6 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 
-#include "common.h"
 
 client_info server[1];
 
@@ -155,6 +159,7 @@ error:
 }
 
 tlv *append_client_data(client_info *client, tlv *message) {
+	UNUSED(client);
 	return message;
 }
 

@@ -66,9 +66,9 @@ class Tlv {
 		*/
 		std::vector<unsigned char> getAllData() const;
 
-		static const unsigned int getTag(const unsigned char a, const unsigned char b,
+		static unsigned int getTag(const unsigned char a, const unsigned char b,
 				const unsigned char c, const unsigned char d);
-		static const unsigned int getTag(const unsigned char tag[4]);
+		static unsigned int getTag(const unsigned char tag[4]);
 	private:
 		/**
 		 * structure representing node of Tlv Object
@@ -86,23 +86,24 @@ class Tlv {
 			TlvNode(const unsigned int tag, const unsigned char gsize);
 			~TlvNode();
 
-			TlvNode *next_sibling_; // pointer to next element
-			TlvNode *first_child_; // pointer to the element embedded in this element
 			const unsigned int tag_;
 			const unsigned char size_; //size of data in this node
 			const unsigned char global_size_; // size of data in this node and ith children
 			unsigned char *data_;
+			TlvNode *next_sibling_; // pointer to next element
+			TlvNode *first_child_; // pointer to the element embedded in this element
 		};
 
 		void addNode(const unsigned int tag, const unsigned char size, const unsigned char * const data,
 			const bool embedded_tags_flag, TlvNode **position);
 
-		const TlvNode * const findNode(const TlvNode * const node, const unsigned int tag) const;
+		const TlvNode * findNode(const TlvNode * const node, const unsigned int tag) const;
 		void getFullBuffer(const TlvNode * const node, std::vector<unsigned char> &buffer) const;
 		void pushSizeAndDataToBuffer(const TlvNode * const node, std::vector<unsigned char> &buffer) const;
 		void pushTagToBuffer(const unsigned int tag, std::vector<unsigned char> &buffer) const;
 		void pushDataToBuffer(const TlvNode * const node, std::vector<unsigned char> &buffer) const;
 		void deleteNode(const TlvNode * const node);
+		bool isDataProper(const unsigned char size, const unsigned char * const data) const;
 
 		TlvNode *head_;
 		TlvNode *last_;

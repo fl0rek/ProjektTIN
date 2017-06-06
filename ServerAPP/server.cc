@@ -1,125 +1,70 @@
+/*
+ * 					HEADER_HEAD
+ * author: Mikolaj Florkiewicz
+ * 					HEADER_TAIL
+ */
 extern "C" {
 #include <server.h>
 }
 
+#include <boost/format.hpp>
+#include <fstream>
 #include <inttypes.h>
 #include <iomanip>
 #include <iostream>
-#include <vector>
+#include <mutex>
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <thread>
 #include <utility>
+#include <vector>
 
 #include <tags.h>
 #include <fdebug.hh>
 #include <Tlv.h>
 
+#include "Replay.hh"
+#include "Game.hh"
+#include "util.hh"
+
+#include <Exceptions.h>
+
 namespace {
-	constexpr char game_image[] = "./game";
+	constexpr char game_image[] = "./GameAPP/Game";
 
 	using namespace tag;
 
 	constexpr unsigned char tags_to_register[] = {internal, game, chat};
 }
 
-namespace libnet_helper {
-void sendAuthError(int client_id) {
-	unsigned char buffer[sizeof(tag::internal_tags::authentication_error +3)];
-	memcpy(buffer, tag::internal_tags::authentication_error, sizeof(tag::internal_tags::authentication_error));
-	buffer[sizeof(tag::internal_tags::authentication_error)] = 1;
-
-	libnet_send_to(client_id, tag::internal, sizeof(buffer), buffer);
-}
-}
-
-class Clients {
-public:
-	class Client {
-	public:
-		enum State {
-			Connected, Chatter, Player
-		};
-		Client() : name("UNKNOWN"), state(Connected) {}
-
-		bool isPlayer() const {
-			return state == Player;
-		}
-		bool isChatter() const {
-			return state == Chatter;
-		}
-
-		bool isUnauthenticated() const {
-			return state == Connected;
-		}
-
-		void authenticate(const State s, const std::string &name = "") {
-			this->state = s;
-			if(!name.empty())
-				this->name = name;
-		}
-
-		std::string getName() const {
-			return name;
-		}
-	private:
-		std::string name;
-		State state;
-	};
-
-	Client& getClient(int id) {
-		if(id > max_id) {
-			clients.resize(id+1);
-			max_id = id;
-		}
-		return clients[id];
-	}
-
-private:
-	int max_id = 0;
-	std::vector<Client> clients;
-};
-
 Clients cs;
+GameAbstraction *g;
 
-void dump(const void *mem, size_t n) {
-	const unsigned char *p = reinterpret_cast<const unsigned char*>(mem);
-	std::cout << std::endl << "====" << std::endl;
-	for(size_t i = 0; i < n; i++) {
-		std::cout << std::setw(2) << std::setfill('0') << std::hex << int(p[i]) << " ";
+bool handle_game_message(const unsigned char* buffer, const size_t length) {
+	log_info("Handling game message [%s:%lu]", buffer, length);
+
+	util::dump(buffer, length);
+
+	Tlv game_data(buffer, length);
+	int client_id = util::get_client_id(game_data);
+	if(client_id < 0)
+		return true; // ignore msg
+
+	Clients::Client &c = cs.getClient(client_id);
+	if(!c.isPlayer()) {
+		libnet_helper::sendAuthError(client_id);
+		return true;
 	}
-	std::cout << std::endl << "====" << std::endl;
-}
 
-class TagNotFoundException : public std::runtime_error {
-	using runtime_error::runtime_error;
-};
-
-bool tag_exists(std::vector<unsigned char> buffer) {
-	return !!buffer.size();
-}
-
-template<typename T>
-T extract_tag(std::vector<unsigned char> buffer, size_t offset = 0) {
-	if(!tag_exists(buffer))
-		throw new TagNotFoundException("");
-	T ret;
-	memcpy(&ret, &buffer[offset], sizeof(T));
-	return ret;
-}
-
-std::pair<int, int> game_handle;
-
-int get_client_id(Tlv msg) {
-	auto client_id_buffer = msg.getTagData(tag::internal_tags::client_id);
-	if(!tag_exists(client_id_buffer))
-		return -1;
-
-	return extract_tag<int>(client_id_buffer);
+	return g->handle_game_message(length, buffer);
 }
 
 void handle_chat_message(const unsigned char* buffer, const size_t length) {
 	log_info("Handling chat message");
 
 	Tlv chat_data(buffer, length);
-	int client_id = get_client_id(chat_data);
+	int client_id = util::get_client_id(chat_data);
 
 	if(client_id < 0)
 		return;
@@ -134,90 +79,65 @@ void handle_chat_message(const unsigned char* buffer, const size_t length) {
 
 	chat_data.add(tag::chat_tags::nick, 0, strlen(name), reinterpret_cast<const unsigned char*>(name));
 
-	libnet_send(chat, length, buffer);
-}
-
-void handle_game_message(const unsigned char* buffer, const size_t length) {
-	log_info("Handling game message [%s:%lu]", buffer, length);
-
-	dump(buffer, length);
-
-	Tlv game_data(buffer, length);
-	int client_id = get_client_id(game_data);
-	if(client_id < 0)
-		return; // ignore
-
-	Clients::Client &c = cs.getClient(client_id);
-	if(!c.isPlayer()) {
-		libnet_helper::sendAuthError(client_id);
-		return;
-	}
-
-	// ONE TAG AT A TIME
-	size_t written = 0;
-	while(written < length) {
-		ssize_t w =  write(game_handle.first, buffer + written, length - written);
-		if(w < 0) {
-			perror("game pipe write");
-			return;
-			//error handling
-		}
-		written += w;
-	}
-
 	{
-		unsigned char tag[4];
-		read(game_handle.second, tag, 4); //TODO real reading
-		unsigned char tag_length[1];
-		read(game_handle.second, tag_length, 1);
-		unsigned char flipping_flag[1];
-		read(game_handle.second, flipping_flag, 1);
-		unsigned char * body = new unsigned char[tag_length[0]];
-		read(game_handle.second, body, tag_length[0]);
-
-		size_t message_length = sizeof tag + sizeof tag_length + sizeof flipping_flag + tag_length[0];
-
-		// this is fucking retarted
-		unsigned char * buffer = new unsigned char[message_length];
-		memcpy(&buffer[0], tag, 4);
-		memcpy(&buffer[4], tag_length, 1);
-		memcpy(&buffer[5], flipping_flag, 1);
-		memcpy(&buffer[6], body, tag_length[0]);
-
-		libnet_send(tag::game, message_length, buffer);
+		std::lock_guard<std::mutex> lock{libnet_mutex};
+		if(!libnet_send(chat, length, buffer)) {
+			log_warn("Failed to send chat message to some connected chatters");
+		}
 	}
-
 }
 
-uint64_t chatter_key = 0;
-uint64_t player_key = 1;
+namespace authentication {
+
+std::vector<uint64_t> keys;
+
+void load_player_keys(std::string fn) {
+	std::ifstream file;
+	file.open(fn, std::ifstream::in);
+
+	std::string key_serialized;
+	while (getline(file, key_serialized))
+		keys.push_back(std::stoul(key_serialized));
+}
 
 Clients::Client::State try_authenticate(uint64_t key) {
-	// TODO xd
-	if(key == chatter_key)
-		return Clients::Client::Chatter;
-	if(key == player_key)
-		return Clients::Client::Player;
+
+	for(const auto k : keys) {
+		if(k == key) {
+			return Clients::Client::Player;
+		}
+	}
 
 	return Clients::Client::Connected; // default state
 }
 
+}
+
 void handle_internal_message(const unsigned char* buffer, const size_t length) {
+	util::dump(buffer, length);
 	Tlv internal_data(buffer, length);
-	int client_id = get_client_id(internal_data);
+	int client_id = util::get_client_id(internal_data);
 
 	if(client_id < 0)
-		return;
+		return; // malformed message from libnet? ignore
 
 	Clients::Client &c = cs.getClient(client_id);
 
-	if(c.isUnauthenticated() &&
-		tag_exists(internal_data.getTagData(tag::internal_tags::authentication_code))) {
-		uint64_t key = extract_tag<uint64_t>(
-				internal_data.getTagData(tag::internal_tags::authentication_code));
-		std::string name = reinterpret_cast<char*>(
-				&internal_data.getTagData(tag::internal_tags::requested_name)[0]);
-		c.authenticate(try_authenticate(key), name);
+	if(c.isUnauthenticated()) {
+		try {
+			if(util::tag_exists(internal_data.getTagData(tag::internal_tags::authentication_code))) {
+				uint64_t key = util::extract_tag<uint64_t>(
+						internal_data.getTagData(tag::internal_tags::authentication_code));
+				c.authenticate(authentication::try_authenticate(key));
+			} else {
+				std::string name = reinterpret_cast<char*>(
+						&internal_data.getTagData(tag::internal_tags::requested_name)[0]);
+				c.authenticate(Clients::Client::Chatter, name);
+			}
+		} catch(TlvException) {
+			log_warn("Malformed internal message from %d", client_id);
+			// no need for error handling,client will be unathenticated so error message is sent back
+		}
 		if(c.isUnauthenticated()) {
 			libnet_helper::sendAuthError(client_id);
 			return;
@@ -225,47 +145,80 @@ void handle_internal_message(const unsigned char* buffer, const size_t length) {
 	}
 }
 
-std::pair<int, int> game_process_start(char const * game_image) {
-	int pid;
-	int parent_to_child[2];
-	int child_to_parent[2];
-	if(pipe(parent_to_child) || pipe(child_to_parent)) {
-		log_err("Can't pipe");
-		exit(1);
+void print_usage_and_exit(char* image) {
+	std::string usage_string =
+"%1% usage: \n\
+\t%1% $port $keyfile [ -r $record_file | -p $play_file ] \n\
+";
+// 0  1     2          3  4              3  4
+	std::cout << boost::format(usage_string) % image;
+	exit(0);
+}
+
+struct {
+	enum {
+		Play, Replay
+	} mode;
+
+	std::string replay_file;
+	std::string key_file;
+	int port;
+} runtime_info;
+
+void parse_args(int argc, char* argv[]) {
+	if(argc != 5) {
+		print_usage_and_exit(argv[0]);
 	}
 
-	char * const args[] = {const_cast<char*>(game_image), 0}; // what could go wrong
+	std::string mode = argv[3];
+	runtime_info.replay_file = argv[4];
+	runtime_info.key_file = argv[2];
 
-	switch(pid = fork()) {
-		case -1:
-			perror("Can't fork");
-			exit(1);
-		case 0: //child
-			close(1); //stdout
-			dup(child_to_parent[1]);
+	if(mode == "-r") { // record mode
+		runtime_info.mode = runtime_info.Play;
+	} else if(mode == "-p") { // play mode
+		runtime_info.mode = runtime_info.Replay;
+	} else {
+		print_usage_and_exit(argv[0]);
+	}
 
-			close(0); //stdin
-			dup(parent_to_child[0]);
-
-			close(parent_to_child[1]);
-			close(child_to_parent[0]);
-			execv(game_image, args);
-			perror("Can't exec");
-			exit(1);
-		default:
-			close(child_to_parent[1]);
-			close(parent_to_child[0]);
-			return std::make_pair(parent_to_child[1], child_to_parent[0]);
+	try {
+		runtime_info.port = std::stoi(argv[1]);
+	} catch(std::logic_error e) {
+		std::cout << e.what() << "\n";
+		print_usage_and_exit(argv[0]);
 	}
 }
 
-int main() {
-	libnet_init(tags_to_register,
-			sizeof(tags_to_register)/sizeof(*tags_to_register));
-	log_info1("Starting server thread");
-	libnet_thread_start(nullptr); // listening on any interface
+int main(int argc, char* argv[]) {
+	parse_args(argc, argv);
 
-	game_handle = game_process_start(game_image);
+	authentication::load_player_keys(runtime_info.key_file);
+
+
+	if(!libnet_init(tags_to_register,
+			sizeof(tags_to_register)/sizeof(*tags_to_register))) {
+		log_err("Could not initialize libnet");
+		exit(-10);
+	}
+
+	log_info1("Starting server thread");
+	libnet_thread_start(runtime_info.port); // listening on any interface
+
+	if(runtime_info.mode == runtime_info.Play) {
+		Game* gg = new Game(runtime_info.replay_file);
+		gg->game_process_start(game_image);
+		g = gg;
+	} else {
+		g = new Replay(runtime_info.replay_file);
+	}
+
+	if(!g->init_ok()) {
+		log_err("Cannot start game");
+		libnet_thread_shutdown();
+		exit(-1);
+	}
+
 
 	while(true) {
 		libnet_wait_for_new_message();
@@ -274,9 +227,11 @@ int main() {
 		unsigned char buffer[256];
 		memset(buffer, 0, sizeof buffer);
 
+
 		buffer_len = libnet_wait_for_tag(tag::internal, buffer, sizeof(buffer), false);
 		if(buffer_len > 0) {
-			debug("got %s", buffer);
+			debug("got %s:%ld", buffer, buffer_len);
+			handle_internal_message(buffer, buffer_len);
 			continue;
 		}
 
@@ -289,19 +244,26 @@ int main() {
 		buffer_len = libnet_wait_for_tag(tag::game, buffer, sizeof(buffer), false);
 		if(buffer_len > 0) {
 			debug("got %s", buffer);
-			handle_game_message(buffer, buffer_len);
+			if(!handle_game_message(buffer, buffer_len)) {
+				log_err("Game instance died, bailing out");
+				exit(-5);
+			}
+
 			continue;
 		}
 
 		switch(buffer_len) {
 			case -ENOTAG:
+				log_err("specified tag not registered");
+				exit(-2);
 			case -EQUEUE:
+				log_err("libnet queue in inconsistent state, should not happen");
+				exit(-3);
 			case -ESIZE:
+				log_err("message too big for buffer, should not occur");
+				exit(-4);
 				// lol
-				break;
 		}
-
-
 	}
-
 }
+

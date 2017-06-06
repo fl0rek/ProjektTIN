@@ -1,6 +1,23 @@
+/*
+ * 					HEADER_HEAD
+ * author: Mikolaj Florkiewicz
+ * 					HEADER_TAIL
+ */
 #pragma once
 
-#define _GNU_SOURCE 201112L
+#define XSTR(x) STR(x)
+#define STR(x) #x
+
+#if !defined _GNU_SOURCE || _GNU_SOURCE == 1
+# define _GNU_SOURCE 201112L
+#else
+# if _GNU_SOURCE == 201112L
+//ok
+# else
+#  pragma message "_GNU_SOURCE = " XSTR(_GNU_SOURCE)
+#  error Somebody was messing with our _GNU_SOURCE
+# endif
+#endif
 
 #include <stdbool.h>
 #include <stdlib.h>
@@ -51,8 +68,8 @@ bool libnet_send(const unsigned char tag, const size_t length,
  * @param length
  * 	provided buffer length
  */
-ssize_t libnet_wait_for_tag(const unsigned char tag, unsigned char *buffer,
-		size_t length) __attribute__((warn_unused_result));
+ssize_t libnet_wait_for_tag(const unsigned char tag, unsigned char *buffer, const size_t length,
+		const bool block) __attribute__((warn_unused_result));
 
 /**
  * @brief

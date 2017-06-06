@@ -18,7 +18,7 @@ target_include_directories(net_server PUBLIC
 
 set(CLIENT_HEADER_FILES, include/client.h common.h include/fdebug.h)
 set(SERVER_HEADER_FILES, include/server.h common.h include/fdebug.h)
-set (CMAKE_C_FLAGS "-std=c11 -ggdb -pedantic -Wall -Wextra -Wcast-align -Wcast-qual -Wdisabled-optimization -Wformat=2 -Winit-self -Wmissing-declarations -Wmissing-include-dirs -Wredundant-decls -Wsign-conversion -Wstrict-overflow=5 -Wswitch-default -Wundef -Wno-error=unused-parameter -trigraphs -Wno-trigraphs -Wno-error=pedantic")
+set (CMAKE_C_FLAGS "-std=c11 -ggdb -pedantic -Wall -Wextra -Wcast-align -Wcast-qual -Wdisabled-optimization -Wformat=2 -Winit-self -Wmissing-declarations -Wmissing-include-dirs -Wredundant-decls -Wsign-conversion -Wstrict-overflow=5 -Wswitch-default -Wundef -Wno-error=unused-parameter -trigraphs -Wno-trigraphs -Wno-error=pedantic -Wno-redundant-decls")
 
 target_link_libraries(net_client "${CLIENT_HEADER_FILES}" Threads::Threads)
 target_link_libraries(net_server "${SERVER_HEADER_FILES}" Threads::Threads)

@@ -1,8 +1,17 @@
+/*
+ * 					HEADER_HEAD
+ * author: Mikolaj Florkiewicz
+ * 					HEADER_TAIL
+ */
 #include "server.h"
 
-#define _GNU_SOURCE 201112L
+#include "common.h" // needs to be first, it's setting up _GNU_SOURCE
 
-#include <stdio.h>
+#define _POSIX_C_SOURCE
+#define _XOPEN_SOURCE
+
+#include <sys/types.h> // needs to be before signal.h
+
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -10,16 +19,15 @@
 #include <limits.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <signal.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/time.h>
-#include <sys/types.h>
-#include <unistd.h>
 #include <tags.h>
+#include <unistd.h>
 
-#include "common.h"
 
 
 #define MAX_CLIENT_NUMBER 100
@@ -134,7 +142,7 @@ error:
 }
 
 inline unsigned get_client_id(client_info *client) {
-	return (unsigned)(clients - client);
+	return (unsigned)(client - clients);
 }
 
 client_info* get_client_by_fd(int fd) {
@@ -153,6 +161,15 @@ static void add_fd_to_select(int fd) {
 	FD_SET(fd, &sockets);
 }
 
+static void select_clients_fd() {
+	for(unsigned i = 0; i < MAX_CLIENT_NUMBER; i++) {
+		if(clients[i].state != STATE_NONE) {
+			debug("selecting %d", clients[i].fd);
+			add_fd_to_select(clients[i].fd);
+		}
+	}
+}
+
 void clear_fd_select(int fd) {
 	FD_CLR(fd, &sockets);
 }
@@ -162,25 +179,37 @@ int selfpipe_write_end;
 int master_socket_fd;
 
 static void close_master_socket(void) {
-	close_socket(master_socket_fd);
+	if(master_socket_fd != -1)
+		close_socket(master_socket_fd);
+
+	master_socket_fd = -1;
+}
+
+static void close_master_socket_signal(int signum) {
+	UNUSED(signum);
+	close_master_socket();
 }
 
 bool exiting = false;
-static int libnet_main(const char *address) {
+static int libnet_main(int port) {
 	FD_ZERO(&sockets);
-	int port = 4200;
 
-	master_socket_fd = initialize_server(port, 1, address);
+	master_socket_fd = initialize_server(port, MAX_CLIENT_NUMBER, 0);
 	atexit(close_master_socket);
+
+	signal(SIGTERM, close_master_socket_signal);
+	signal(SIGINT, close_master_socket_signal);
+
 
 	int selfpipe_fd;
 	check1((selfpipe_fd = create_selfpipe(&selfpipe_write_end, 0)), "selfpipe init");
 
-	log_info("listening on %s:%d", address, port);
+	log_info("listening on %d", port);
 
 	while(!exiting) {
 		add_fd_to_select(selfpipe_fd);
 		add_fd_to_select(master_socket_fd);
+		select_clients_fd();
 
 		check1(select(nfds, &sockets, 0, 0, 0) >= 0, "select");
 
@@ -212,17 +241,19 @@ error:
 
 static void* libnet_main_pthread_wrapper(void * args) {
 	//TODO(florek) return value!
-	libnet_main((char *)args);
+	int *exit_status = malloc(sizeof exit_status);
+	*exit_status = libnet_main(*(int *)args);
+	pthread_exit((void*)exit_status);
 	return 0;
 }
 
 pthread_t libnet_thread;
 
-bool libnet_thread_start(const char *address) {
+bool libnet_thread_start(int port) {
 	//TODO(florek) better error handling?
-	const char **params = malloc(sizeof * address);
+	int *params = malloc(sizeof port);
 	check_mem(params);
-	*params = address;
+	*params = port;
 	check1(!pthread_create(&libnet_thread, 0, libnet_main_pthread_wrapper, params),
 			"pthread_create libnet_thread");
 	return true;
@@ -235,8 +266,10 @@ bool libnet_thread_shutdown() {
 	check1(notify_selfpipe(selfpipe_write_end) >= 0, "selfpipe write");
 	//TODO(florek) error handling
 	//TODO(florek) return val hadnling
-	check1(!pthread_join(libnet_thread, 0), "pthread_join libnet_thread");
-	return true;
+	int *exit_status;
+	check1(!pthread_join(libnet_thread, (void**)&exit_status), "pthread_join libnet_thread");
+
+	return !exit_status;
 error:
 	return false;
 }
@@ -257,7 +290,8 @@ bool libnet_send(const unsigned char tag, const size_t length,
 	for(unsigned i = 0; i < MAX_CLIENT_NUMBER; i++) {
 		client_info *c = clients + i;
 
-		success &= send_tag(c, tag, length, value);
+		if(c->state == STATE_READY)
+			success &= send_tag(c, tag, length, value);
 	}
 
 	return success;
@@ -266,14 +300,16 @@ bool libnet_send(const unsigned char tag, const size_t length,
 bool libnet_send_to(const int client_id, const unsigned char tag,
 		const size_t length, const unsigned char *value) {
 	client_info *client = get_client_by_fd(client_id);
+	if(!client || client->state != STATE_READY)
+		return false;
 	return send_tag(client, tag, length, value);
 }
 
 tlv* append_client_data(client_info *client, tlv *message) {
 	char client_id[TAG_SIZE + 2 + sizeof(int)];
 	memcpy(client_id, tag_internal_client_id, sizeof(tag_internal_client_id));
-	client_id[TAG_SIZE] = sizeof(client->fd);
-	client_id[TAG_SIZE+1] = 1; // because for some reason we need some flippin flag
+	client_id[TAG_SIZE] = 0; // because for some reason we need some flippin flag
+	client_id[TAG_SIZE+1] = sizeof(client->fd);
 	memcpy(client_id + TAG_SIZE + 2, &client->fd, sizeof(client->fd));
 
 	size_t old_length = message->length;

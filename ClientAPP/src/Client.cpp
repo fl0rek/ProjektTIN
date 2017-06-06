@@ -212,7 +212,7 @@ void Client::receiveFromChat() const
 	if(size < 0)
 		throw ChildAppError("Problem with pipe, cannot read from chat");
 
-	while(!sendToServer(tag::chat, data, size)); //TODO maybe not in while
+	!sendToServer(tag::chat, data, size);
 }
 
 
