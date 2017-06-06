@@ -4,154 +4,176 @@ author Michal Citko
 date 25.05.2017
 */
 #include "Client.h"
+#include "Tlv.h"
+
 #include <iostream>
 #include <vector>
+#include <thread>
+#include <fcntl.h>
+#include <sys/wait.h>
+#include <errno.h>
+
+using namespace std;
 
 Client::Client(const char * const address, const char * const service) : mode_(kChatMode)
 {
-	if(!connectToServer(address, service))
-		throw NetworkError("Cannot connect to server");
-
-	if(!createPipes())
-		throw ChildAppError("Cannot create pipes");
-
-	if(!startChatApp())
-		throw ChildAppError("Cannot start chat app");
-
-	if(!startGameApp())
-		throw ChildAppError("Cannot start game app");
-
+	connectToServer(address, service);
+	createPipes();
+	setNonblockPipes();
+	startChatApp();
 }
 
-Client::Client(const char * const address, const char * const service, const char * const session_key) 
-	: mode_(kGameMode)
+Client::Client(const char * const address, const char * const service, uint64_t session_key) 
+	: mode_(kGameMode), session_key_(session_key)
 {
-	memcpy(session_key_, session_key, sizeof(session_key));
+	connectToServer(address, service);
+	createPipes();
+//	sendSessionKey();
+//	receiveAuthentication();
+	startGameApp();
+	setNonblockPipes();
+}
 
-	if(!connectToServer(address, service))
-		throw NetworkError("Cannot connect to server");
+void Client::sendSessionKey() const
+{
+	ssize_t size = sizeof(uint64_t);
+	unsigned char key[size];
+	memcpy(const_cast<void *>(static_cast<const void *>(&session_key_)), key, size);
 
-	if(!createPipes())
-		throw ChildAppError("Cannot create pipes");
+	Tlv buffer;
+	buffer.add(tag::internal_tags::authentication_code, 0, size, key);
+	vector<unsigned char> full_data = buffer.getAllData();
+
+	if(!libnet_send(tag::internal, full_data.size(), full_data.data()))
+		throw NetworkError("cant send session key");
+}
+
+void Client::receiveAuthentication() const
+{
 	
-	if(!startGameApp())
-		throw ChildAppError("Cannot start game app");
+	unsigned char data[kReceiveBufferSize];
+	ssize_t size;
+	libnet_wait_for_new_message();
+
+	if((size = libnet_wait_for_tag(tag::internal, data, kReceiveBufferSize, true)) > 0)
+	{
+		Tlv buffer(data, size);
+		if((buffer.getTagData(tag::internal_tags::authentication_error).size() != 0))
+			throw NetworkError("server did not authenticate me");
+		
+	}
+
+	switch(size)
+	{
+		case -ENOTAG:
+		case -EQUEUE:
+		case -ESIZE:
+			throw NetworkError("Libnet reported problem");
+	}
 }
 
-void Client::changeToViewerMode() noexcept
+void Client::run()
+{
+	std::thread server_thread(&Client::receiveFromServer, this);
+	std::thread app_thread(&Client::receiveFromApp, this);
+	app_thread.join();
+	exit(0);
+}
+
+void Client::changeToViewerMode()
 {
 
-	if(!startChatApp())
-		throw ChildAppError("Cannot start chat app after the game app");
-
+	startChatApp();
 	mode_ = kChatMode;
 }
 
-bool Client::createPipes() noexcept
+void Client::createPipes()
 {
 	if(pipe(pipefd_chat_out_) != 0 || pipe(pipefd_chat_in_) != 0 || pipe(pipefd_game_out_) != 0 
 			|| pipe(pipefd_game_in_) != 0)
-	{
-		return false;
-	}
+		throw ChildAppError("Cannot create pipes");
+}
+
+void Client::setNonblockPipes()
+{
+	int flags_chat;
+	int flags_game;
+
+	if((flags_chat = fcntl(pipefd_chat_in_[0], F_GETFL)) < 0 || 
+		(flags_game = fcntl(pipefd_game_in_[0], F_GETFL)) < 0)
+		throw ChildAppError("Cannot get flags from pipes");
 	
-	return true;
+	flags_chat |= O_NONBLOCK;
+	flags_game |= O_NONBLOCK;
+	
+	if((fcntl(pipefd_chat_in_[0], F_SETFL, flags_chat) < 0) 
+		|| (fcntl(pipefd_chat_in_[0], F_SETFL, flags_game) < 0))
+		throw ChildAppError("Cannot set flags for pipes");
 }
 
-bool Client::createGameAppPipes() noexcept
+void Client::createGameAppPipes()
 {
-	if(dup2(pipefd_game_out_[0], STDIN_FILENO) != 0 || dup2(pipefd_game_in_[1], STDOUT_FILENO) != 0 
-			|| dup2(pipefd_game_in_[1], STDERR_FILENO) != 0 || close(pipefd_game_in_[0]) != 0
-			|| close(pipefd_game_in_[1]) != 0 || close(pipefd_game_out_[0]) != 0 
-			|| close(pipefd_game_out_[1]) != 0)
-	{
-		return false;
-	}
-
-
-	return true;
+	if(dup2(pipefd_game_out_[0], STDIN_FILENO) < 0 || dup2(pipefd_game_in_[1], STDOUT_FILENO) < 0 
+			|| dup2(pipefd_game_in_[1], STDERR_FILENO) < 0 || close(pipefd_game_in_[0]) < 0
+			|| close(pipefd_game_in_[1]) < 0 || close(pipefd_game_out_[0]) < 0 
+			|| close(pipefd_game_out_[1]) < 0)
+		throw ChildAppError("Cannot duplicate pipes");
 }
 
-bool Client::createChatAppPipes() noexcept
+void Client::createChatAppPipes()
 {
 
-	if(dup2(pipefd_chat_out_[0], STDIN_FILENO) != 0 || dup2(pipefd_chat_in_[1], STDOUT_FILENO) != 0 
-			|| dup2(pipefd_chat_in_[1], STDERR_FILENO) != 0 || close(pipefd_chat_in_[0]) != 0 
-			|| close(pipefd_chat_in_[1]) != 0 || close(pipefd_chat_out_[0]) != 0 
+	if(dup2(pipefd_chat_out_[0], STDIN_FILENO) < 0 || dup2(pipefd_chat_in_[1], STDOUT_FILENO) < 0 
+			|| dup2(pipefd_chat_in_[1], STDERR_FILENO) < 0 || close(pipefd_chat_in_[0]) < 0 
+			|| close(pipefd_chat_in_[1]) < 0 || close(pipefd_chat_out_[0]) < 0 
 			|| close(pipefd_chat_out_[1]))
-	{
-		return false;
-	}
-
-
-	return true;
+		throw ChildAppError("Cannot duplicate pipes");
 }
 
-bool Client::startChatApp() noexcept
+void Client::startChatApp()
 {
-	app_pid_ = fork();
+	chat_app_pid_ = fork();
 	
-	if(app_pid_ == 0)
+	if(chat_app_pid_ == 0)
 	{
-		if(createChatAppPipes() != 0)
-		{
-			throw ChildAppError("Cannot duplicate pipes");
-		}
+		createChatAppPipes();
 
-		if(execl(kChatApp, "", (char*) NULL) == -1)
+		if(execv(kChatApp, kChatAppParams) == -1)
 		{
 			throw ChildAppError("Cannot execute chat");
 		}
 	}	
-	else if(app_pid_ == -1)
-	{
-		return false;
-	}
+	else if(chat_app_pid_ == -1)
+		throw ChildAppError("Cannot start chat app");
 
 	if(close(pipefd_chat_in_[1]) != 0 || close(pipefd_chat_out_[0]) != 0)
-		return false;
-	
-	return true;
+		throw ChildAppError("Cannot close not used pipe ends");
 }
 
-bool Client::startGameApp() noexcept
+void Client::startGameApp()
 {
-	app_pid_ = fork();
+	game_app_pid_ = fork();
 	
-	if(app_pid_ == 0)
+	if(game_app_pid_ == 0)
 	{
-		if(createGameAppPipes() != 0)
-			throw ChildAppError("Cannot duplicate pipes");
+		createGameAppPipes();
 
-		if(execl(kGameApp, "", (char*) NULL) == -1)
+		if(execv(kGameApp, kGameAppParams) == -1)
 			throw ChildAppError("Cannot execute game");
 	}	
-	else if(app_pid_ == -1)
-	{
-		return false;
-	}
+	else if(game_app_pid_ == -1)
+		throw ChildAppError("Cannot start game app");
 
 	if(close(pipefd_game_in_[1]) != 0 || close(pipefd_game_out_[0]) != 0)
-		return false;
-
-	return true;
+		throw ChildAppError("Cannot close not used pipe ends");
 }
 
-bool Client::connectToServer(const char * const address, const char * const service) noexcept
+void Client::connectToServer(const char * const address, const char * const service)
 {
 
 	if(!libnet_init(tags_to_register, sizeof(tags_to_register) / sizeof(*tags_to_register)) 
 			|| !libnet_thread_start(address, service))
-		return false;
-
-	return true;
-}
-
-void Client::requestGameSynchronisation()
-{
-	;
-	//TODO
-//	while(!sendToServer(last_state_, last_state_size_));
+		throw NetworkError("Cannot connect to server");
 }
 
 void inline Client::sendToGame(const unsigned char * const data, const ssize_t size) const
@@ -170,49 +192,65 @@ void inline Client::sendToChat(const unsigned char * const data, const ssize_t s
 		throw ChildAppError("Problem with pipe, cannot write to chat");
 }
 
-bool inline Client::sendToServer(const unsigned char tag, const unsigned char * const data, const ssize_t size) const noexcept
+bool inline Client::sendToServer(const unsigned char tag, const unsigned char * const data
+	, const ssize_t size) const noexcept
 {
-	//TODO
-	Tlv buffer;// get rid of this Tlv, chat and game should use it
-	buffer.add(0x88, 0 , size, data);
-	std::vector<unsigned char> full_buffer = buffer.getAllData();
-	return libnet_send(tag, full_buffer.size(), full_buffer.data());
+	return libnet_send(tag, size - 1, data);
 }
 
 void Client::receiveFromApp() noexcept
 {
+	bool end_flag = kClientRun;
+
 	while(1)
 	{
+		if(end_flag == kClientEnd)
+		{
+			return;
+		}
+
 		if(mode_ == kGameMode)
-			receiveFromGame();
+			receiveFromGame(&end_flag);
 		else
-			receiveFromChat();
+			receiveFromChat(&end_flag);
 	}
 }
 
-void Client::receiveFromGame()
+void Client::receiveFromGame(bool * const end_flag)
 {
-	unsigned char data[kReceiveBufferSize];
-	ssize_t size = read(pipefd_game_in_[0], data, kReceiveBufferSize);
+	if(waitpid(game_app_pid_, nullptr, WNOHANG) == 0)
+	{
+		unsigned char data[kReceiveBufferSize];
+		ssize_t size = read(pipefd_game_in_[0], data, kReceiveBufferSize);
 
-	if(size < 0)
-		throw ChildAppError("Problem with pipe, cannot read from game");
+		if(size < 0 && errno != EAGAIN)
+			throw ChildAppError("Problem with pipe, cannot read from game");
 //TODO
 //	if(endgame)
 //		changeToViewerMode();
 //	else
-		sendToServer(tag::game, data, size);
+		if(size > 0)
+			sendToServer(tag::game, data, size);
+	}
+	else
+		*end_flag = kClientEnd;
 }
 
-void Client::receiveFromChat() const
+void Client::receiveFromChat(bool * const end_flag)
 {
-	unsigned char data[kReceiveBufferSize];
-	ssize_t size = read(pipefd_chat_in_[0], data, kReceiveBufferSize);
+	if(waitpid(chat_app_pid_, NULL, WNOHANG) == 0)
+	{
+		unsigned char data[kReceiveBufferSize];
+		ssize_t size = read(pipefd_chat_in_[0], data, kReceiveBufferSize);
 
-	if(size < 0)
-		throw ChildAppError("Problem with pipe, cannot read from chat");
+		if(size < 0 && errno != EAGAIN)
+			throw ChildAppError("Problem with pipe, cannot read from chat");
 
-	!sendToServer(tag::chat, data, size);
+		if(size > 0)
+			sendToServer(tag::chat, data, size);
+	}
+	else
+		*end_flag = kClientEnd;
 }
 
 
@@ -225,21 +263,13 @@ void Client::receiveFromServer() noexcept
 	{
 		libnet_wait_for_new_message();
 
-		if((size = libnet_wait_for_tag(tag::game, data, kReceiveBufferSize, false)) > 0) // with false doesnt block
-		{
+		if((size = libnet_wait_for_tag(tag::game, data, kReceiveBufferSize, false)) > 0) 
 			sendToGame(data, size);
-			memcpy(last_state_, data, sizeof(unsigned char) * size);
-			last_state_size_ = size;
-		}
 		else if((size = libnet_wait_for_tag(tag::chat, data, kReceiveBufferSize, false)) > 0)
-		{
-			//TODO change this, Tlv should bu used by chat to perform this operation
-			sendToChat(data + 6, size - 17);
-		}
+			sendToChat(data, size); 
 		else if((size = libnet_wait_for_tag(tag::internal, data, kReceiveBufferSize, false)) > 0)
 		{
-			//TODO
-			std::cout<<"interna";
+			;
 		}
 
 		switch(size)
