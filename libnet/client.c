@@ -58,9 +58,11 @@ error:
 
 static void notify_libnet_read() {
 	libnet_init_finished = true;
+
 	pthread_mutex_lock(&libnet_ready_mutex);
 	pthread_cond_signal(&libnet_ready);
 	pthread_mutex_unlock(&libnet_ready_mutex);
+
 }
 
 bool exiting = false;
