@@ -9,7 +9,8 @@
 #include <QDateTime>
 #include <list>
 #include <sstream>
-
+#include <pthread.h>
+#include <signal.h>
 
 namespace Ui {
 class MainWindow;
@@ -19,7 +20,7 @@ class MainWindow : public QMainWindow
 {
     Q_OBJECT
 public:
-    explicit MainWindow(QWidget *parent = 0);
+    explicit MainWindow( pthread_t process,QWidget *parent = 0);
     ~MainWindow();
     char* prepareMessage(QString);
     void sendToPipe(Message msg);
@@ -43,7 +44,7 @@ private:
     QString userName;
     QString currentTime;
     QString messageToSend;
-
+    pthread_t reader;
 
     static std::list<std::string> chat;
 
