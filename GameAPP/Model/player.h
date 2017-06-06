@@ -14,7 +14,7 @@
 
 class Player
 {
-    unsigned char id;
+    unsigned id;
     std::vector<Card> cards;
     Card lastCard;
 	bool win = false;
@@ -31,7 +31,7 @@ public:
      *      creates a player with given nick/id
      * @param nick
      */
-    Player(unsigned char id);
+    Player(unsigned id);
 
     /**
      * @brief Player
@@ -39,7 +39,7 @@ public:
      * @param nick
      * @param cards
      */
-    Player(unsigned char id, std::vector<Card> cards);
+    Player(unsigned id, std::vector<Card> cards);
 
     /**
      * @brief giveCard
@@ -76,8 +76,8 @@ public:
 
     std::vector<unsigned char> serialize();
 
-    unsigned char getId() const;
-    void setId(unsigned char value);
+    unsigned getId() const;
+    void setId(unsigned value);
     std::vector<Card> getCards() const;
 	void setCards(const std::vector<Card> &value);
 	Card getLastCard();

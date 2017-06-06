@@ -219,14 +219,30 @@ std::vector<Card> Game::GameState::getPlayersCards(Player *player)
 
 }
 
-short Game::GameState::getCurrentPlayerIndex()
+unsigned Game::GameState::getCurrentPlayerIndex()
+{
+    for(unsigned i = 0; i < players.size(); i++)
+        if(players[i]->getId() == currentPlayerId)
+            return i;
+}
+
+unsigned Game::GameState::getCurrentPlayerId()
 {
     return currentPlayerId;
 }
 
+unsigned Game::GameState::getNextPlayerIndex()
+{
+    if(players.back()->getId() == currentPlayerId)
+        return 0;
+    for(unsigned i = 0; i < players.size(); i++)
+        if(players[i]->getId() == currentPlayerId)
+            return ++i;
+}
+
 Player *Game::GameState::getCurrentPlayer()
 {
-    return players[currentPlayerId];
+    return players[getCurrentPlayerIndex()];
 }
 
 void Game::GameState::dealCards()
@@ -411,7 +427,9 @@ void Game::acceptMessage(Tlv buffer)
     {
         if(buffer.isTagPresent(tag::game_tags::add_client))
         {
-
+            std::vector<unsigned char> c = buffer.getTagData(tag::internal_tags::client_id);
+            int id = (c[0] << 24) | (c[1] << 16) | (c[2] << 8) | c[3];
+            addPlayer(id);
         }
         if(buffer.isTagPresent(tag::game_tags::start_game))
         {
@@ -473,10 +491,7 @@ std::vector<unsigned char> Game::Message::serialize()
 Game::Message Game::deserialize(std::vector<unsigned char> data)
 {
     Message msg;
-    //msg.t = static_cast<MessageType>(data.back());
-    //data.pop_back();
     msg.gs = deserializeGameState(data);
-    //msg.t = static_cast<MessageType>(data.back());
     return msg;
 }
 
@@ -635,14 +650,14 @@ Player *Game::getCurrentPlayer()
 }
 
 
-char Game::getPlayerId()
+unsigned Game::getPlayerId()
 {
     return playerId;
 }
 
-void Game::setPlayerId(char c)
+void Game::setPlayerId(unsigned id)
 {
-    playerId = c;
+    playerId = id;
 }
 
 

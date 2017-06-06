@@ -10,14 +10,14 @@ Player::Player()
 }
 
 
-Player::Player(unsigned char id)
+Player::Player(unsigned id)
 {
     this->id = id;
     lastCard = std::make_pair(NO_RANK, NO_SUIT);
 }
 
 
-Player::Player(unsigned char id, std::vector<Card> cards) : id(id), cards{ std::move(cards) }{}
+Player::Player(unsigned id, std::vector<Card> cards) : id(id), cards{ std::move(cards) }{}
 
 
 void Player::giveCard(Card c)
@@ -89,12 +89,12 @@ std::vector<unsigned char> Player::serialize()
 }
 
 
-unsigned char Player::getId() const
+unsigned Player::getId() const
 {
     return id;
 }
 
-void Player::setId(unsigned char value)
+void Player::setId(unsigned value)
 {
     this->id = value;
 }

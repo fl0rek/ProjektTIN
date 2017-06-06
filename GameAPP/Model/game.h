@@ -88,7 +88,7 @@ public:
     {
         std::vector<Player*> players;
         std::vector<Player*> winners;
-        short currentPlayerId;
+        unsigned currentPlayerId;
         Deck deck;
         Card floatingCard;
         bool isStarted;
@@ -147,7 +147,9 @@ public:
          * @return
          *      index
          */
-        short getCurrentPlayerIndex();
+        unsigned getCurrentPlayerIndex();
+        unsigned getCurrentPlayerId();
+        unsigned getNextPlayerIndex();
 
         Player *getCurrentPlayer();
 
@@ -181,7 +183,7 @@ private:
     const static int kMaxPlayers = 12;
     GameState gameState;
     Player *player;
-    char playerId = -1;
+    unsigned playerId = 0;
     Mode mode;
     /**
      * @brief initialize
@@ -349,8 +351,8 @@ public:
     std::vector<Card> getPlayersCards();
     short getCurrentPlayerIndex();
     Player *getCurrentPlayer();
-    char getPlayerId();
-    void setPlayerId(char c);
+    unsigned getPlayerId();
+    void setPlayerId(unsigned id);
     std::vector<Player*> getPlayers() const;
     bool getIsFinished() const;
     Card getFloatingCard() const;
