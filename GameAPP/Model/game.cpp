@@ -286,7 +286,25 @@ std::vector<unsigned char> Game::GameState::serializePlayers(std::vector<Player*
  */
 Game::Game()
 {
+    addPlayer(1);
+    addPlayer(2);
+    addPlayer(3);
+    addPlayer(4);
+    addPlayer(5);
+    addPlayer(6);
+    addPlayer(7);
+    addPlayer(8);
+    addPlayer(9);
+    addPlayer(10);
+    addPlayer(11);
+    addPlayer(12);
+    start();
+//    gameState.addWinner(gameState.players.front());
+//    gameState.addWinner(gameState.players.front());
 
+    Message msg;
+    msg.gs = gameState;
+    sendMessage(msg, tag::game_tags::step);
 }
 
 Game::Game(char id)
@@ -356,8 +374,8 @@ bool Game::checkDeck(Game::GameState gs)
 void Game::requestGameState()
 {
     Message msg;
-    msg.t = GS_REQUEST;
-    sendMessage(msg);
+    //msg.t = GS_REQUEST;
+    //sendMessage(msg);
 }
 
 void Game::addPlayer(char id)
@@ -373,13 +391,14 @@ void Game::start()
     gameState.deck.initialize();
     gameState.dealCards();
     for(Player *p : gameState.players)
-        p->setWin(p->hasThree());
+        if(p->hasThree())
+            gameState.addWinner(p);
     gameState.isStarted = true;
-    gameState.currentPlayerId = 0;
+    gameState.currentPlayerId = 1;
     Message msg;
     msg.gs = gameState;
-    msg.t = CLIENT_START;
-    sendMessage(msg);
+    //msg.t = CLIENT_START;
+    //sendMessage(msg, tag::game_tags::start_game);
 }
 
 void Game::passCard(Card c)
@@ -388,10 +407,10 @@ void Game::passCard(Card c)
     msg.gs = gameState;
     msg.gs.passCard(c);
     if(msg.gs.isFinished)
-        msg.t = END_GAME;
+        ;//msg.t = END_GAME;
     else
-        msg.t = PASS_CARD;
-    sendMessage(msg);
+        ;//msg.t = PASS_CARD;
+    //sendMessage(msg, tag::game_tags::step);
 }
 
 void Game::exchangeCard()
@@ -399,86 +418,131 @@ void Game::exchangeCard()
     Message msg;
     msg.gs = gameState;
     msg.gs.exchangeCard();;
-    msg.t = EXCHANGE;
-    sendMessage(msg);
+    //msg.t = EXCHANGE;
+    //sendMessage(msg, tag::game_tags::step);
 }
 
 void Game::terminate()
 {
     Message msg;
     msg.gs = gameState;
-    msg.t = TERMINATE;
-    sendMessage(msg);
+    //msg.t = TERMINATE;
+    //sendMessage(msg, tag::game_tags);
 }
 
 //TODO - just a early version
 void Game::acceptMessage(Tlv buffer)
 {
-    if(buffer)
-    std::cout<<"Message accepted";
-    //Message msg = deserialize(s);
-    Message msg;
-    if(msg.t == ADD_PLAYER)
-        addPlayer(msg.id);
-    else if(msg.t == SERVER_START)
-        start();
-    else
-        switch(msg.t)
-        {
-        case PASS_CARD:
-            if(isValid(msg.gs))
-            {
-                msg.t = UPDATE;
-                sendMessage(msg);
-            }
-            break;
-        case EXCHANGE:
-            if(isValid(msg.gs))
-            {
-                msg.t = UPDATE;
-                sendMessage(msg);
-            }
-        case END_GAME:
-            if(isValid(msg.gs))
-            {
-                update(msg.gs);
-                terminate();
-            }
-            break;
-        case GS_REQUEST:
-            getWholeGameStatus();
-            break;
-        case INITIALIZE:
-            initialize();
-            break;
-        case INIT_FROM_GS:
-            initialize(msg.gs);
-            break;
-        case UPDATE:
-            if(isValid(msg.gs))
-                update(msg.gs);
-            else
-                requestGameState();
-            break;
-        case CLIENT_START:
-            initialize(msg.gs);
-            setPlayer();
-            break;
-        case TERMINATE:
-            gameState = msg.gs;
-            break;
-        default:
-            std::cout<<"Invalid message type";
-            break;
-        }
+//    Message msg;
+//    if(buffer.isTagPresent(tag::game_tags::add_client))
+//    {
+//        msg = deserialize(buffer.getAllData());
+//        if(msg.t == ADD_PLAYER)
+//            addPlayer(msg.id);
+//    }
+
+//    if(buffer.isTagPresent(tag::game_tags::start_game))
+//    {
+//        start();
+//    }
+
+//    if(buffer.isTagPresent(tag::game_tags::resync_request))
+//    {
+
+//    }
+
+//    if(buffer.isTagPresent(tag::game_tags::step))
+//    {
+//        msg = deserialize(buffer.getAllData());
+//        if(msg.t == PASS_CARD)
+//        {
+//            if(isValid(msg.gs))
+//            {
+//                msg.t = UPDATE;
+//                sendMessage(msg, tag::game_tags::step_response);
+//            }
+//        }
+//        if(msg.t == EXCHANGE)
+//        {
+//            if(isValid(msg.gs))
+//            {
+//                msg.t = UPDATE;
+//                sendMessage(msg, tag::game_tags::step_response);
+//            }
+//        }
+//    }
+
+//    if(buffer.isTagPresent(tag::game_tags::step_response))
+//    {
+//        msg = deserialize(buffer.getAllData());
+//        update(msg.gs);
+
+//    }
+
+//    std::cout<<"Message accepted";
+//    //Message msg = deserialize(s);
+//    Message msg;
+//    if(msg.t == ADD_PLAYER)
+//        addPlayer(msg.id);
+//    else if(msg.t == SERVER_START)
+//        start();
+//    else
+//        switch(msg.t)
+//        {
+//        case PASS_CARD:
+//            if(isValid(msg.gs))
+//            {
+//                msg.t = UPDATE;
+//                sendMessage(msg);
+//            }
+//            break;
+//        case EXCHANGE:
+//            if(isValid(msg.gs))
+//            {
+//                msg.t = UPDATE;
+//                sendMessage(msg);
+//            }
+//        case END_GAME:
+//            if(isValid(msg.gs))
+//            {
+//                update(msg.gs);
+//                terminate();
+//            }
+//            break;
+//        case GS_REQUEST:
+//            getWholeGameStatus();
+//            break;
+//        case INITIALIZE:
+//            initialize();
+//            break;
+//        case INIT_FROM_GS:
+//            initialize(msg.gs);
+//            break;
+//        case UPDATE:
+//            if(isValid(msg.gs))
+//                update(msg.gs);
+//            else
+//                requestGameState();
+//            break;
+//        case CLIENT_START:
+//            initialize(msg.gs);
+//            setPlayer();
+//            break;
+//        case TERMINATE:
+//            gameState = msg.gs;
+//            break;
+//        default:
+//            std::cout<<"Invalid message type";
+//            break;
+//        }
 }
 
 //TODO - it's just sending a message to be accepted by another game instance
-void Game::sendMessage(Message msg)
+void Game::sendMessage(Message msg, unsigned char *t)
 {
-    std::vector<unsigned char> data = serialize(msg);
+    std::vector<unsigned char> data = msg.serialize();
     Tlv buffer;
-    buffer.add(tag, 0, data.size(), data);
+    buffer.add(t, 0, data.size(), data);
     std::vector<unsigned char> full_buffer = buffer.getAllData();
     std::cout<<full_buffer;
 }
@@ -486,7 +550,7 @@ void Game::sendMessage(Message msg)
 
 std::string Game::serialize(Message msg)
 {
-
+    sendMessage(msg, tag::game_tags::step);
 }
 
 std::string Game::serialize(std::vector<Player*> p)
@@ -502,19 +566,21 @@ std::string Game::serialize(Player p)
 std::vector<unsigned char> Game::Message::serialize()
 {
     std::vector<unsigned char> data;
-    data.insert(data.begin(), t);
+    //data.insert(data.begin(), t);
     std::vector<unsigned char> d = gs.serialize();
     for(std::vector<unsigned char>::iterator it = --d.end(); it >= d.begin(); it--)
         data.insert(data.begin(), (*it));
+    data.insert(data.begin(), id);
     return data;
 }
 
 Game::Message Game::deserialize(std::vector<unsigned char> data)
 {
     Message msg;
-    msg.t = static_cast<MessageType>(data.back());
-    data.pop_back();
+    //msg.t = static_cast<MessageType>(data.back());
+    //data.pop_back();
     msg.gs = deserializeGameState(data);
+    //msg.t = static_cast<MessageType>(data.back());
     return msg;
 }
 
@@ -603,7 +669,7 @@ Game::Deck Game::deserializeDeck(std::vector<unsigned char> data)
 std::vector<Player *> Game::deserializePlayers(std::vector<unsigned char> data)
 {
     std::vector<Player*> players;
-    int playersSize = data.back();
+    unsigned playersSize = data.back();
     data.pop_back();
 
     for(unsigned i = 0; i < playersSize; i++)
@@ -660,8 +726,8 @@ void Game::getWholeGameStatus()
 {
     Message msg;
     msg.gs = gameState;
-    msg.t = INIT_FROM_GS;
-    sendMessage(msg);
+    //msg.t = INIT_FROM_GS;
+    //sendMessage(msg);
 }
 
 

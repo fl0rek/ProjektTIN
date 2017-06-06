@@ -40,10 +40,7 @@ void *gameApp(void *ptr)
 
     QApplication a(argc, &argv);
     a.setApplicationName("Game");
-    if(user == 1)
-       g = new Game(std::string(data->argv));
-    else
-       g = new Game();
+    g = new Game();
     if(user != 2)
         v = new View(g, user);
     a.exec();
@@ -63,7 +60,7 @@ void *reader(void *)
         //TODO game-server game-client proper communication
         if(msg != "")
         {
-            g->acceptMessage(msg);
+            //g->acceptMessage(msg);
             if(user != 2)
                 v->update();
         }

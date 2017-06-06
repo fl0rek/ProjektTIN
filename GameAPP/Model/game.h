@@ -171,9 +171,9 @@ public:
 
     struct Message
     {
-        MessageType t;
+        //MessageType t;
         GameState gs;
-        short id;
+        char id;
         std::vector<unsigned char> serialize();
      };
 
@@ -280,7 +280,7 @@ public:
      * @param id
      *      player id
      */
-    void addPlayer(short id);
+    void addPlayer(char id);
 
     /**
      * @brief start
@@ -322,7 +322,7 @@ public:
      *      serializes given Message and sends it on stdout
      * @param gs
      */
-    void sendMessage(Message msg);
+    void sendMessage(Message msg, unsigned char *t);
 
     /**
      * @brief serialize
