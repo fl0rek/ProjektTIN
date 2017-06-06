@@ -196,6 +196,19 @@ void Tlv::getFullBuffer(const TlvNode * const node, vector<unsigned char> &buffe
 
 }
 
+bool Tlv::isTagPresent(const unsigned int tag) const 
+{
+	if(findNode(head_, tag) != nullptr)
+		return true;
+	else 
+		return false;
+}
+
+bool Tlv::isTagPresent(const unsigned char tag[4]) const
+{
+	return isTagPresent(getTag(tag));
+}
+
 const Tlv::TlvNode * Tlv::findNode(const TlvNode * const node, const unsigned int tag) const {
 	const TlvNode *return_node;
 
