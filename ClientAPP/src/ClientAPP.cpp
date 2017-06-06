@@ -46,7 +46,6 @@ bool checkArgs(int argc, char ** argv)
 //TODO add proper argument check
 int main(int argc, char ** argv)
 {
-
 	if(!checkArgs(argc, argv))
 	{
 		cout<<"BAD INPUT!\n"<<"first adress, then service, and if game mode then session key"<<endl;

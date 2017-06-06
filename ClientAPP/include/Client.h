@@ -17,7 +17,6 @@ extern "C" {
 
 #include <unistd.h>
 #include <string.h>
-#include <mutex>
 
 constexpr unsigned char tags_to_register[] = {tag::internal, tag::game, tag::chat};
 
@@ -54,8 +53,8 @@ class Client
 		void run();
 
 	private:
-		void receiveFromApp(std::mutex * const end_mutex, bool * const end_flag) noexcept;
-		void receiveFromServer(std::mutex * const end_mutex, bool * const end_flag) noexcept;
+		void receiveFromApp() noexcept;
+		void receiveFromServer() noexcept;
 		void startChatApp();
 		void startGameApp();
 		void changeToViewerMode();
@@ -72,8 +71,8 @@ class Client
 				const ssize_t size) const;
 		bool inline sendToServer(const unsigned char tag,
 			const unsigned char * const data, const ssize_t size) const noexcept;
-		void receiveFromGame(std::mutex * const end_mutex, bool * const end_flag);
-		void receiveFromChat(std::mutex * const end_mutex, bool * const end_flag);
+		void receiveFromGame(bool * const end_flag);
+		void receiveFromChat(bool * const end_flag);
 		void sendSessionKey() const;
 		void receiveAuthentication() const;
 

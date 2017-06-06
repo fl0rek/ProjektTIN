@@ -74,13 +74,10 @@ void Client::receiveAuthentication() const
 
 void Client::run()
 {
-	bool end_flag = kClientRun;
-	std::mutex end_mutex ;
-
-	std::thread server_thread(&Client::receiveFromServer, this, &end_mutex, &end_flag);
-	std::thread app_thread(&Client::receiveFromApp, this, &end_mutex, &end_flag);
+	std::thread server_thread(&Client::receiveFromServer, this);
+	std::thread app_thread(&Client::receiveFromApp, this);
 	app_thread.join();
-	server_thread.join();
+	exit(0);
 }
 
 void Client::changeToViewerMode()
@@ -205,27 +202,25 @@ bool inline Client::sendToServer(const unsigned char tag, const unsigned char * 
 	return libnet_send(tag, full_buffer.size(), full_buffer.data());
 }
 
-void Client::receiveFromApp(mutex * const end_mutex, bool * const end_flag) noexcept
+void Client::receiveFromApp() noexcept
 {
+	bool end_flag = kClientRun;
+
 	while(1)
 	{
-		end_mutex->lock();
-		std::cout<<"a";
-		if(*end_flag == kClientEnd)
+		if(end_flag == kClientEnd)
 		{
-			end_mutex->unlock();
 			return;
 		}
-		end_mutex->unlock();
 
 		if(mode_ == kGameMode)
-			receiveFromGame(end_mutex, end_flag);
+			receiveFromGame(&end_flag);
 		else
-			receiveFromChat(end_mutex, end_flag);
+			receiveFromChat(&end_flag);
 	}
 }
 
-void Client::receiveFromGame(mutex * const end_mutex, bool * const end_flag)
+void Client::receiveFromGame(bool * const end_flag)
 {
 	if(waitpid(game_app_pid_, nullptr, WNOHANG) == 0)
 	{
@@ -242,21 +237,16 @@ void Client::receiveFromGame(mutex * const end_mutex, bool * const end_flag)
 			sendToServer(tag::game, data, size);
 	}
 	else
-	{
-		end_mutex->lock();
 		*end_flag = kClientEnd;
-		end_mutex->unlock();
-	}
 }
 
-void Client::receiveFromChat(mutex * const end_mutex, bool * const end_flag)
+void Client::receiveFromChat(bool * const end_flag)
 {
 	if(waitpid(chat_app_pid_, NULL, WNOHANG) == 0)
 	{
 		unsigned char data[kReceiveBufferSize];
 		ssize_t size = read(pipefd_chat_in_[0], data, kReceiveBufferSize);
 
-		std::cout<<"b"<<std::endl;
 		if(size < 0 && errno != EAGAIN)
 			throw ChildAppError("Problem with pipe, cannot read from chat");
 
@@ -264,30 +254,17 @@ void Client::receiveFromChat(mutex * const end_mutex, bool * const end_flag)
 			sendToServer(tag::chat, data, size);
 	}
 	else
-	{
-		std::cout<<"SET"<<std::endl;
-		end_mutex->lock();
 		*end_flag = kClientEnd;
-		end_mutex->unlock();
-	}
 }
 
 
-void Client::receiveFromServer(mutex * const end_mutex, bool * const end_flag) noexcept
+void Client::receiveFromServer() noexcept
 {
 	unsigned char data[kReceiveBufferSize];
 	ssize_t size;
 
 	while(1)
 	{
-		end_mutex->lock();
-		if(*end_flag == kClientEnd)
-		{
-			end_mutex->unlock();
-			return;
-		}
-		end_mutex->unlock();
-
 		libnet_wait_for_new_message();
 
 		if((size = libnet_wait_for_tag(tag::game, data, kReceiveBufferSize, false)) > 0) 
@@ -296,8 +273,7 @@ void Client::receiveFromServer(mutex * const end_mutex, bool * const end_flag) n
 			sendToChat(data + 6, size - 17); //TODO change this, Tlv should bu used by chat to perform this operation
 		else if((size = libnet_wait_for_tag(tag::internal, data, kReceiveBufferSize, false)) > 0)
 		{
-			//TODO
-			std::cout<<"interna";
+			;
 		}
 
 		switch(size)
