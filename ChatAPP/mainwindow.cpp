@@ -64,8 +64,13 @@ void MainWindow::sendToPipe(Message msg)
     Tlv buffer;
     buffer.add(tag::chat_tags::message, 0, serialize(msg).size(), reinterpret_cast<const unsigned char*>(serialize(msg).c_str()));
     std::vector<unsigned char> full_data = buffer.getAllData();
-    for_each(full_data.begin(), full_data.end(), [](unsigned char c){std::cout << c;});
-    std::cout<<serialize(msg)<<std::endl;
+    if(full_data.size() < 120){
+        for_each(full_data.begin(), full_data.end(), [](unsigned char c){std::cout << c;});
+        std::cout<<std::endl;
+
+    }  
+    else
+         full_data.pop_back();
 }
 
 void MainWindow::readFromPipe(std::string message)
