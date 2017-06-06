@@ -55,12 +55,12 @@ public:
 		return clients[id];
 	}
 
-	void request_while_replay_for_client(int client_id) {
+	void request_whole_replay_for_client(int client_id) {
 		requested_whole_replay.push_back(client_id);
 	}
 
 	virtual void notify(const unsigned  char tag[4], size_t length, unsigned char *value) {
-		if(util::tag_equal(tag, tag::game_tags::resync_response)) {
+		if(util::tag_equal(tag, tag::game_tags::step)) {
 			for(const int client_id : requested_whole_replay) {
 				std::lock_guard<std::mutex> lock{libnet_mutex};
 				if(!libnet_send_to(client_id, tag::game, length, value)) {
@@ -84,3 +84,4 @@ private:
 	std::vector<int> requested_whole_replay;
 };
 
+Clients cs;

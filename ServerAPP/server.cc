@@ -38,8 +38,9 @@ namespace {
 	constexpr unsigned char tags_to_register[] = {internal, game, chat};
 }
 
-Clients cs;
 GameAbstraction *g;
+
+bool server_exiting = false;
 
 bool handle_game_message(const unsigned char* buffer, const size_t length) {
 	log_info("Handling game message [%s:%lu]", buffer, length);
@@ -206,7 +207,6 @@ int main(int argc, char* argv[]) {
 
 	authentication::load_player_keys(runtime_info.key_file);
 
-
 	if(!libnet_init(tags_to_register,
 			sizeof(tags_to_register)/sizeof(*tags_to_register))) {
 		log_err("Could not initialize libnet");
@@ -218,6 +218,7 @@ int main(int argc, char* argv[]) {
 
 	if(runtime_info.mode == runtime_info.Play) {
 		Game* gg = new Game(runtime_info.replay_file);
+		game_helper::observers.push_back(gg);
 		gg->game_process_start(game_image);
 		g = gg;
 	} else {
@@ -230,8 +231,9 @@ int main(int argc, char* argv[]) {
 		exit(-1);
 	}
 
+	game_helper::observers.push_back(&cs);
 
-	while(true) {
+	while(!server_exiting) {
 		libnet_wait_for_new_message();
 
 		ssize_t buffer_len;
