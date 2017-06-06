@@ -12,7 +12,7 @@ TARGET = chatAPP
 TEMPLATE = app
 CONFIG += console
 INCLUDEPATH += /usr/include/boost
-QMAKE_CXXFLAGS += -std=c++11
+QMAKE_CXXFLAGS += -std=c++14
 LIBS += -L/usr/include/boost -lboost_serialization
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which as been marked as deprecated (the exact warnings
@@ -27,10 +27,13 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 
 SOURCES += main.cpp\
-        mainwindow.cpp
+        mainwindow.cpp \
+        ../libtlv/src/Tlv.cpp
 
 HEADERS  += mainwindow.h \
     debug.h \
-    serial.h
+    serial.h \
+    ../libtlv/include/Tlv.h
+
 
 FORMS    += mainwindow.ui

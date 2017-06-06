@@ -8,12 +8,15 @@
 #include <errno.h>
 #include <debug.h>
 #include <stdio.h>
+#include "../libtlv/src/Tlv.cpp"
+
 struct threadData{
     int arg1;
     char *arg2;
 };
 struct threadData dataToPass[1];
 
+pthread_t rd, chat;
 void* chatAPP(void* ptr){
     struct threadData *my_data;
     my_data = (struct threadData*) ptr;
@@ -22,16 +25,16 @@ void* chatAPP(void* ptr){
     char* argv = my_data->arg2;
 
     QApplication a(argc, &argv);
-    MainWindow w;
+    MainWindow w(rd);
     w.show();
     a.exec();
 
     pthread_exit(0);
 }
 void* reader(void* ptr){
-    char ms[250];
+    char ms[550];
     while(1){
-        int x = read(STDIN_FILENO, ms, 250);
+        int x = read(STDIN_FILENO, ms, 550);
         std::string msg(ms, x);
         MainWindow::readFromPipe(msg);
     }
@@ -43,7 +46,6 @@ int main(int argc, char *argv[]){
         printf("Incorrect input arguments.\n");
         exit(1);
     }
-    pthread_t rd, chat;
 
     dataToPass[0].arg1 = argc;
     dataToPass[1].arg2 = *argv;

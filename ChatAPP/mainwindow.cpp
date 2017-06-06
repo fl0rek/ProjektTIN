@@ -3,10 +3,12 @@
 #include <iostream>
 #include <QTextStream>
 #include <QtGui>
-
-
+#include <algorithm>
+#include <vector>
+#include "../libtlv/include/Tlv.h"
+#include "../include/tags.h"
 std::list<std::string> MainWindow::chat;
-MainWindow::MainWindow(QWidget *parent) :
+MainWindow::MainWindow( pthread_t process, QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow){
     ui->setupUi(this);
@@ -14,8 +16,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     this->setFixedSize(290, 550);
     this->userName = this->messageToSend = "";
-    this->currentTime = QDateTime::currentDateTime().time().toString();
-
+    this->currentTime = QDateTime::currentDateTime().time().toString(); 
+    this->reader = process;
     QTimer *timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), this, SLOT(setText()));
     timer->start(100);
@@ -24,6 +26,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
 MainWindow::~MainWindow()
 {
+    pthread_kill(this->reader, SIGKILL);
     delete ui;
     delete timer;
 }
@@ -58,18 +61,22 @@ char* MainWindow::prepareMessage(QString msg)
 
 void MainWindow::sendToPipe(Message msg)
 {
-    std::cout << serialize(msg) <<std::endl;
+    /*Tlv buffer;
+    buffer.add(tag::chat_tags::message, 0, serialize(msg).size(), reinterpret_cast<const unsigned char*>(serialize(msg).c_str()));
+    std::vector<unsigned char> full_data = buffer.getAllData();
+    for_each(full_data.begin(), full_data.end(), [](auto c){std::cout << c;});*/
+    std::cout<<serialize(msg)<<std::endl;
 }
 
 void MainWindow::readFromPipe(std::string message)
 {
-    if(message.size() <= 250)
+    if(message.size() <= 550)
     {
         chat.push_back(message);
     }
     else
     {
-        std::cout << "ERROR: MESSAGE TO LONG - MAX MESSAGE SIZE: 50";
+        std::cout << "ERROR: MESSAGE TO LONG - MAX MESSAGE SIZE: 550";
     }
 }
 
@@ -110,6 +117,11 @@ void MainWindow::setText()
         }
         for(auto it = chat.begin(); it != chat.end(); it++)
         {
+           /* Tlv buffor = Tlv(reinterpret_cast<const unsigned char*>(*it->c_str()), sizeof(*it));
+            std::vector<unsigned char> tmp;
+            tmp = buffor.getTagData(tag::chat_tags::message);
+            std::string sName(reinterpret_cast<char*> (tmp.data()));
+            */
             Message msg = deserialize(*it);
             QString toDisplay = QString::fromStdString(msg.user) + "(" +QString::fromStdString(msg.time) + "): "+
                     QString::fromStdString(msg.m);
