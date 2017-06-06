@@ -27,9 +27,9 @@ Client::Client(const char * const address, const char * const service, uint64_t 
 	: mode_(kGameMode), session_key_(session_key)
 {
 	connectToServer(address, service);
+	sendSessionKey();
+	receiveAuthentication();
 	createPipes();
-//	sendSessionKey();
-//	receiveAuthentication();
 	startGameApp();
 	setNonblockPipes();
 }
@@ -43,8 +43,8 @@ void Client::sendSessionKey() const
 	Tlv buffer;
 	buffer.add(tag::internal_tags::authentication_code, 0, size, key);
 	vector<unsigned char> full_data = buffer.getAllData();
-
-	if(!libnet_send(tag::internal, full_data.size(), full_data.data()))
+	std::cout<<full_data.size()<<std::endl;
+	if(!sendToServer(tag::internal, full_data.data(), full_data.size()))
 		throw NetworkError("cant send session key");
 }
 
@@ -158,8 +158,13 @@ void Client::startGameApp()
 	{
 		createGameAppPipes();
 
-		if(execv(kGameApp, kGameAppParams) == -1)
-			throw ChildAppError("Cannot execute game");
+		if(mode_ == kGameMode)
+			if(execv(kGameApp, kGamePlayerAppParams) == -1)
+				throw ChildAppError("Cannot execute game");
+
+		else	
+			if(execv(kGameApp, kGameSpectatorAppParams) == -1)
+				throw ChildAppError("Cannot execute game");
 	}	
 	else if(game_app_pid_ == -1)
 		throw ChildAppError("Cannot start game app");
@@ -195,7 +200,7 @@ void inline Client::sendToChat(const unsigned char * const data, const ssize_t s
 bool inline Client::sendToServer(const unsigned char tag, const unsigned char * const data
 	, const ssize_t size) const noexcept
 {
-	return libnet_send(tag, size - 1, data);
+	return libnet_send(tag, size, data);
 }
 
 void Client::receiveFromApp() noexcept
@@ -247,7 +252,7 @@ void Client::receiveFromChat(bool * const end_flag)
 			throw ChildAppError("Problem with pipe, cannot read from chat");
 
 		if(size > 0)
-			sendToServer(tag::chat, data, size);
+			sendToServer(tag::chat, data, size - 1);
 	}
 	else
 		*end_flag = kClientEnd;

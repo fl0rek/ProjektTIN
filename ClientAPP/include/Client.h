@@ -81,8 +81,9 @@ class Client
 		static const ssize_t kReceiveBufferSize = 1000;
 		char kGameApp[16] = "GameAPP/Game";
 		char kChatApp[19] = "ChatAPP/chatAPP";
-		char * const kChatAppParams[2] = {kChatApp, 0};
-		char * const kGameAppParams[2] = {kGameApp, 0};
+		char * const kChatAppParams[2] = {kChatApp, nullptr};
+		char * const kGameSpectatorAppParams[3] = {kGameApp, "0", 0};
+		char * const kGamePlayerAppParams[3] = {kGameApp, "1", 0};
 		const bool kClientRun = true;
 		const bool kClientEnd = false;
 
