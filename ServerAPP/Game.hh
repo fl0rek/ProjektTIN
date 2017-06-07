@@ -41,11 +41,6 @@ void handle_reader(int read_handle) {
 		memcpy(&buffer[5], tag_length, 1);
 		memcpy(&buffer[6], body, tag_length[0]);
 		std::cout<<"PRZYSZLOKURWA"<<std::endl;
-		for(int i =0; i < message_length; ++i)
-		{
-			std::cout<<int(buffer[i])<<" ";
-		}
-		std::cout<<"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$"<<std::endl;
 		notify_observers(tag, message_length, buffer);
 	}
 }
