@@ -26,7 +26,7 @@ T extract_tag(std::vector<unsigned char> buffer, size_t offset = 0) {
 	return ret;
 }
 
-int get_client_id(Tlv msg) {
+int get_client_id(Tlv &msg) {
 	auto client_id_buffer = msg.getTagData(tag::internal_tags::client_id);
 	if(!tag_exists(client_id_buffer))
 		return -1;
