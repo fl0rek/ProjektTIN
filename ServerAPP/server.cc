@@ -72,7 +72,7 @@ void handle_chat_message(const unsigned char* buffer, const size_t length) {
 	log_info("Handling chat message");
 
 	try {
-		Tlv chat_data(Tlv(buffer, length));
+		Tlv chat_data(buffer, length);
 		int client_id = util::get_client_id(chat_data);
 
 		if(client_id < 0)
