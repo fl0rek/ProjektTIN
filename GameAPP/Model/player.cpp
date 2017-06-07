@@ -10,14 +10,14 @@ Player::Player()
 }
 
 
-Player::Player(std::string nick)
+Player::Player(int id)
 {
-    this->nick = nick;
+    this->id = id;
     lastCard = std::make_pair(NO_RANK, NO_SUIT);
 }
 
 
-Player::Player(std::string nick, std::vector<Card> cards) : nick(nick), cards{ std::move(cards) }{}
+Player::Player(int id, std::vector<Card> cards) : id(id), cards{ std::move(cards) }{}
 
 
 void Player::giveCard(Card c)
@@ -70,15 +70,36 @@ bool Player::hasThree()
     return false;
 }
 
-
-std::string Player::getNick() const
+std::vector<unsigned char> Player::serialize()
 {
-    return nick;
+    std::vector<unsigned char> data;
+    data.insert(data.begin(), id>>24);
+    data.insert(data.begin(), id>>16);
+    data.insert(data.begin(), id>>8);
+    data.insert(data.begin(), id);
+    data.insert(data.begin(), win);
+    data.insert(data.begin(), canExchange);
+    data.insert(data.begin(), lastCard.first);
+    data.insert(data.begin(), lastCard.second);
+    for(Card c : cards)
+    {
+        data.insert(data.begin(), c.first);
+        data.insert(data.begin(), c.second);
+    }
+    data.insert(data.begin() + cards.size() * 2, cards.size());
+    data.push_back(data.size());
+    return data;
 }
 
-void Player::setNick(const std::string &value)
+
+int Player::getId() const
 {
-    nick = value;
+    return id;
+}
+
+void Player::setId(int value)
+{
+    this->id = value;
 }
 
 std::vector<Card> Player::getCards() const
@@ -93,7 +114,7 @@ void Player::setCards(const std::vector<Card> &value)
 
 Card Player::getLastCard()
 {
-	return lastCard;
+    return lastCard;
 }
 
 void Player::setLastCard(Card value)

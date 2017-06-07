@@ -167,6 +167,7 @@ ssize_t libnet_wait_for_tag(const unsigned char tag, unsigned char *buffer, cons
 		goto error;
 	}
 	free(msg);
+	msg = 0;
 
 	return message_length;
 error:
@@ -192,7 +193,6 @@ bool enqueue_message(tlv *message) {
 	return true;
 
 error:
-	// TODO(florek) error handling
 	return false;
 }
 
@@ -209,10 +209,13 @@ error:
 	return ;
 }
 
-static void client_disconnect(client_info *client) {
+void client_disconnect(client_info *client) {
 	debug("Disconnecting with client %u", get_client_id(client));
 	check_warn1(send_tag(client, TAG_BYE, 0, 0), "send bye");
 	unsigned client_id = get_client_id(client);
+
+	if(client_id < 0 || client->fd < 0)
+	    return;
 
 	if(!close_socket(client->fd)) {
 		if(errno == ENOTCONN) {
@@ -222,6 +225,7 @@ static void client_disconnect(client_info *client) {
 	}
 
 	client->state = STATE_NONE; // disconnect ok, free the slot
+	//client->fd = -1;
 	clear_fd_select(client->fd);
 	return;
 }
@@ -308,6 +312,7 @@ error:
 }
 
 bool handle_message(client_info *client, tlv *message) {
+	hexDump("origin message", message, message->length + sizeof(*message));
 	log_info("Got message from client %u, len %lu",
 			get_client_id(client), message->length);
 	if((message->tag & TAG_INTERNAL_MASK) == TAG_INTERNAL_MASK)
@@ -322,7 +327,9 @@ bool handle_message(client_info *client, tlv *message) {
 bool send_tag(client_info const * client, const unsigned char tag,
 		const size_t length, const unsigned char * value) {
 	debug("Sending tag %x to %d", tag, client->fd);
-	unsigned char * buff = malloc(HEADER_LEN + length);
+	//unsigned char * buff = malloc(HEADER_LEN + length);
+	unsigned char * buff = calloc(1, HEADER_LEN + length);
+	check_mem(buff);
 	buff[0] = tag;
 	buff[1] = (unsigned char) length;
 	memcpy(buff + HEADER_LEN, value, length);
@@ -339,7 +346,8 @@ bool send_tag(client_info const * client, const unsigned char tag,
 	free(buff);
 	return true;
 error:
-	free(buff);
+	if(buff)
+	    free(buff);
 	return false;
 }
 
@@ -356,7 +364,7 @@ bool try_read(client_info *client, unsigned char *buff, size_t bytes_to_read) {
 
 	int fd = client->fd;
 
-	size_t bytes_available;
+	size_t bytes_available = 0;
 	ioctl(fd, FIONREAD, &bytes_available);
 
 	if(bytes_available == 0) // this may or may not mean disconnect
@@ -433,7 +441,6 @@ int handle_client_input(int sock_fd) {
 	if(client->read_status == READ_STATUS_WAITING_FOR_DATA) {
 		size_t bytes_to_read = client->internal_buffer[1]; // second byte of header is value size
 
-		//TODO(florek): something better?
 		message = malloc(sizeof * message + bytes_to_read * sizeof(char));
 		check_mem(message);
 
@@ -456,6 +463,8 @@ int handle_client_input(int sock_fd) {
 
 	return 0;
 error:
+	if(!client)
+		client->state = STATE_NONE;
 	if(message)
 		free(message);
 	return -1;

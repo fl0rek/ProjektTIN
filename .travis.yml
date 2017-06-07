@@ -20,14 +20,10 @@ language: cpp
 install:
         - if [ "$CXX" = "g++" ]; then export CXX="g++-5" CC="gcc-5"; fi
         - if [ "$CXX" = "clang++" ]; then export CXX="clang++-3.9" CC="clang-3.9"; fi
-
-before_script:
-        - mkdir build
-        - cd build
+        - export TRAVIS_BUILD=1
 
 script:
-        - cmake ..
-        - make
+        - ./build.sh
 
 after_failure:
         - cat CMakeFiles/*.log

@@ -38,16 +38,24 @@ namespace {
 	constexpr unsigned char tags_to_register[] = {internal, game, chat};
 }
 
-Clients cs;
 GameAbstraction *g;
+
+bool server_exiting = false;
 
 bool handle_game_message(const unsigned char* buffer, const size_t length) {
 	log_info("Handling game message [%s:%lu]", buffer, length);
 
 	util::dump(buffer, length);
+	int client_id = -1;
 
-	Tlv game_data(buffer, length);
-	int client_id = util::get_client_id(game_data);
+	try {
+		Tlv game_data(buffer, length);
+		client_id = util::get_client_id(game_data);
+	} catch(TlvException &e) {
+		log_err("Received malformed game message");
+		return true; // it's not fatal error
+	}
+
 	if(client_id < 0)
 		return true; // ignore msg
 
@@ -63,21 +71,26 @@ bool handle_game_message(const unsigned char* buffer, const size_t length) {
 void handle_chat_message(const unsigned char* buffer, const size_t length) {
 	log_info("Handling chat message");
 
-	Tlv chat_data(buffer, length);
-	int client_id = util::get_client_id(chat_data);
+	try {
+		Tlv chat_data(Tlv(buffer, length));
+		int client_id = util::get_client_id(chat_data);
 
-	if(client_id < 0)
-		return;
+		if(client_id < 0)
+			return;
 
-	Clients::Client &c = cs.getClient(client_id);
+		Clients::Client &c = cs.getClient(client_id);
 
-	if(!c.isChatter()) {
-		libnet_helper::sendAuthError(client_id);
+		if(!c.isChatter()) {
+			libnet_helper::sendAuthError(client_id);
+		}
+
+		const char *name = c.getName().c_str();
+
+		chat_data.add(tag::chat_tags::nick, 0, strlen(name),
+			reinterpret_cast<const unsigned char*>(name));
+	} catch(TlvException &e) {
+		log_err("Malformed chat message");
 	}
-
-	const char *name = c.getName().c_str();
-
-	chat_data.add(tag::chat_tags::nick, 0, strlen(name), reinterpret_cast<const unsigned char*>(name));
 
 	{
 		std::lock_guard<std::mutex> lock{libnet_mutex};
@@ -101,9 +114,11 @@ void load_player_keys(std::string fn) {
 }
 
 Clients::Client::State try_authenticate(uint64_t key) {
-
-	for(const auto k : keys) {
-		if(k == key) {
+	for(auto it = keys.begin(); it != keys.end(); it++) {
+		if(*it == key) {
+			using std::swap;
+			swap(*it, keys.back());
+			keys.pop_back();
 			return Clients::Client::Player;
 		}
 	}
@@ -115,6 +130,18 @@ Clients::Client::State try_authenticate(uint64_t key) {
 
 void handle_internal_message(const unsigned char* buffer, const size_t length) {
 	util::dump(buffer, length);
+	try {
+		Tlv internal_data(buffer, length);
+	} catch(TlvException &e) {
+		log_err("Malformed internal message");
+		return;
+		// I know this causes buffer to be parsed twice,
+		// but since this Tlv class lacks
+		// copy constructor this is necessary tradeoff
+		// We could wrap this whole function in try
+		// catch block but that would be overkill
+	}
+
 	Tlv internal_data(buffer, length);
 	int client_id = util::get_client_id(internal_data);
 
@@ -125,23 +152,37 @@ void handle_internal_message(const unsigned char* buffer, const size_t length) {
 
 	if(c.isUnauthenticated()) {
 		try {
-			if(util::tag_exists(internal_data.getTagData(tag::internal_tags::authentication_code))) {
+			if(util::tag_exists(internal_data.getTagData(
+					tag::internal_tags::authentication_code))) {
+
 				uint64_t key = util::extract_tag<uint64_t>(
-						internal_data.getTagData(tag::internal_tags::authentication_code));
+					internal_data.getTagData(
+						tag::internal_tags::authentication_code));
+
 				c.authenticate(authentication::try_authenticate(key));
 			} else {
 				std::string name = reinterpret_cast<char*>(
-						&internal_data.getTagData(tag::internal_tags::requested_name)[0]);
+					&internal_data.getTagData(
+						tag::internal_tags::requested_name)[0]);
 				c.authenticate(Clients::Client::Chatter, name);
 			}
 		} catch(TlvException) {
 			log_warn("Malformed internal message from %d", client_id);
-			// no need for error handling,client will be unathenticated so error message is sent back
+			// no need for error handling,
+			// client will be unathenticated so error message is sent back
 		}
 		if(c.isUnauthenticated()) {
 			libnet_helper::sendAuthError(client_id);
 			return;
 		}
+		if(c.isPlayer()) {
+			libnet_helper::sendPlayerHisId(client_id);
+			g->add_player(client_id);
+			if(authentication::keys.size() == 0) {
+				g->start_game();
+			}
+		}
+
 	}
 }
 
@@ -190,11 +231,16 @@ void parse_args(int argc, char* argv[]) {
 	}
 }
 
+void kill_all_children() {
+	signal(SIGQUIT, SIG_IGN);
+	kill(-getpid(), SIGQUIT); // kill all children
+}
+
 int main(int argc, char* argv[]) {
+	atexit(kill_all_children);
 	parse_args(argc, argv);
 
 	authentication::load_player_keys(runtime_info.key_file);
-
 
 	if(!libnet_init(tags_to_register,
 			sizeof(tags_to_register)/sizeof(*tags_to_register))) {
@@ -207,6 +253,7 @@ int main(int argc, char* argv[]) {
 
 	if(runtime_info.mode == runtime_info.Play) {
 		Game* gg = new Game(runtime_info.replay_file);
+		game_helper::observers.push_back(gg);
 		gg->game_process_start(game_image);
 		g = gg;
 	} else {
@@ -219,14 +266,14 @@ int main(int argc, char* argv[]) {
 		exit(-1);
 	}
 
+	game_helper::observers.push_back(&cs);
 
-	while(true) {
+	while(!server_exiting) {
 		libnet_wait_for_new_message();
 
 		ssize_t buffer_len;
 		unsigned char buffer[256];
 		memset(buffer, 0, sizeof buffer);
-
 
 		buffer_len = libnet_wait_for_tag(tag::internal, buffer, sizeof(buffer), false);
 		if(buffer_len > 0) {
@@ -261,9 +308,10 @@ int main(int argc, char* argv[]) {
 				exit(-3);
 			case -ESIZE:
 				log_err("message too big for buffer, should not occur");
-				exit(-4);
-				// lol
+				//should not occour and is not fatal
 		}
 	}
+
+	libnet_thread_shutdown();
 }
 

@@ -83,18 +83,17 @@ bool send_tag(client_info const * client, const unsigned char tag,
 		const size_t length, const unsigned char * value)
 	__attribute__((warn_unused_result));
 
-//bool handle_internal_message(client_info *client, tlv *message);
 
 bool try_read(client_info *client, unsigned char *buff, size_t bytes_to_read);
 bool try_read_header(client_info *client, unsigned char *buff);
 
-bool close_socket(int fd);
+bool enqueue_message(tlv *message);
 
 int handle_client_input(int sock_fd);
 
-//bool wait_for_tag(unsigned char tag);
+bool close_socket(int fd);
 
-bool enqueue_message(tlv *message);
+void client_disconnect(client_info *client);
 
 int create_selfpipe(int *selfpipe_write_end, int *selfpipe_read_end);
 int notify_selfpipe(int selfpipe_write_end);

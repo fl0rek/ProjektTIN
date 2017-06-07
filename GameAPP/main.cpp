@@ -8,16 +8,17 @@
 #include <unistd.h>
 #include <string>
 #include <QDebug>
-
+#include <string>
+#include <fstream>
 
 /* TODO
  * check game->isValid()
- * game-server communication
- * game-client communication
+ * check game-server communication
+ * check game-client communication
  *
  * test if view is working properly with message sending
  * documentation
- * code refactor
+ * code refactor // get rid of unnecessary functions
  */
 
 Game *g;
@@ -40,35 +41,37 @@ void *gameApp(void *ptr)
 
     QApplication a(argc, &argv);
     a.setApplicationName("Game");
-    if(user == 1)
-       g = new Game(std::string(data->argv));
+    if(user == 2)
+        g = new Game(1);
     else
-       g = new Game();
+        g = new Game(0);
     if(user != 2)
         v = new View(g, user);
     a.exec();
-
     pthread_exit(0);
 }
 
 
 void *reader(void *)
 {
-    char message[256];
+    unsigned char message[256];
     while(1)
     {
         int x = read(STDIN_FILENO, message, 256);
-        std::string msg(message, x);
-        msg = trim(msg);
-        //TODO game-server game-client proper communication
-        if(msg != "")
-        {
-            g->acceptMessage(msg);
-            if(user != 2)
-                v->update();
-        }
-        for(unsigned i = 0; i < msg.size(); i++)
-            message[i] = ' ';
+//        std::string msg(message, x);
+
+   //     unsigned char data[msg.size()];
+   //     for(unsigned i = 0; i < msg.size(); ++i)
+     //       data[i] = static_cast<unsigned char>(msg[i]);
+        Tlv buffer(message, x);
+
+   //     if(buffer.isTagPresent(tag::game_tags::terminate))
+     //       break;
+       // if(buffer.isTagPresent(tag::game_tags::invalid_step))
+       //     continue;
+        g->acceptMessage(buffer);
+        //if(user != 2)
+            //v->update();
     }
     pthread_exit(0);
 }
@@ -85,7 +88,7 @@ int main(int argc, char *argv[])
             exit(1);
             break;
         case 2:
-            if(user < 0 && user > 2)
+            if(user < 0 || user > 2)
             {
                 std::cout<<invalidArgs;
                 exit(1);
@@ -114,11 +117,13 @@ int main(int argc, char *argv[])
         pthreadCreateError(errno);
     if(pthread_create(&rd, NULL, reader, NULL))
         pthreadCreateError(errno);
-
     if(pthread_join(rd, NULL))
         pthreadJoinError(errno);
     if(pthread_join(game, NULL))
         pthreadJoinError(errno);
+
+    delete v;
+    delete g;
 
     return 0;
 }

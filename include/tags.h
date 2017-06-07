@@ -26,41 +26,42 @@ namespace tag {
 	}
 	constexpr unsigned char game = 0x12;
 	namespace game_tags {
-		// request whole game data
+    		// request whole game data
 		// valid usages:
 		// 	game -> client (in case of inconsistency i guess?)
 		// 	client -> server // passthrough
 		// 	server -> game
 		constexpr unsigned char resync_request[] = { 0x12, 0x00, 0x00, 0x01 };
-		// whole data response
-		// valid usages:
-		// 	game -> server
-		// 	server -> client // passthrough
-		// 	client -> game
-		constexpr unsigned char resync_response[] = { 0x12, 0x00, 0x00, 0x02 };
+
 		// move performed by player
 		// valid usages:
 		// 	game -> player client
 		// 	player client -> server
 		// 	server -> game
-		// 	server -> client
-		// 	client -> game
-		constexpr unsigned char step[] = { 0x12, 0x00, 0x00, 0x03 };
-		// validity of last sent step should contain 1 byte with 1/0
+		constexpr unsigned char step[] = { 0x12, 0x00, 0x00, 0x02 };
+
+		// invalid last step preformed by client
 		// valid usages:
-		// 	game -> server
-		// 	server -> client (if client sends invalid move)
-		constexpr unsigned char step_response[] = { 0x12, 0x00, 0x00, 0x04 };
+		// server game -> server
+		// server -> client // passthrough
+        	// client -> client game
+		constexpr unsigned char invalid_step[] = { 0x12, 0x00, 0x00, 0x03 };
+
+        	// game has ended
+    		// valid usages:
+		// server game -> server
+		// server -> client // passthrough
+        	// client -> client game
+		constexpr unsigned char terminate[] = { 0x12, 0x00, 0x00, 0x04 };
 
 		// add user to game
 		// valid usages:
-		// 	server -> game
-		// 	server -> client
+		// 	server -> server game
 		constexpr unsigned char add_client[] = { 0x12, 0x00, 0x00, 0x05 };
 
-		// start game, game should respond with `step` I guess
+		// start server game, game should respond with step
 		// valid usages:
-		// 	server -> game
+		// server -> server game
 		constexpr unsigned char start_game[] = { 0x12, 0x00, 0x00, 0x06 };
 	}
 	constexpr unsigned char chat = 0x13;

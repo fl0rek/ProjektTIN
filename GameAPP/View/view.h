@@ -4,7 +4,6 @@
 #include "Model/game.h"
 #include "cardview.h"
 #include "button.h"
-#include "util.h"
 
 #include <QGraphicsScene>
 #include <QGraphicsView>
@@ -35,6 +34,7 @@ class View : public QGraphicsView
     std::vector<CardView*> cards;
     std::vector<CardView*> floatingCards;
     std::vector<CardView*> playerCards;
+    std::vector<QGraphicsTextItem*> labels;
     enum User {OBSERVER, PLAYER};
     User user;
 
@@ -61,7 +61,7 @@ class View : public QGraphicsView
      *      y coord
      * @param text
      */
-    void drawLabel(unsigned x, unsigned y, std::string text);
+    void drawLabel(unsigned x, unsigned y);
 
     /**
      * @brief drawCardsLine
@@ -73,15 +73,13 @@ class View : public QGraphicsView
      * @param p
      *      position
      */
-    void drawCardsLine(unsigned ammount, std::vector<std::string> &nicks, Position p);
+    void drawCardsLine(unsigned ammount, Position p);
 
     /**
      * @brief drawCards
      *      draws cards for all players
-     * @param nicks
-     *      players nicks
      */
-    void drawCards(std::vector<std::string> nicks);
+    void drawCards();
 
     /**
      * @brief drawButtons
@@ -167,5 +165,6 @@ public slots:
     void passCard();
     void exchangeCard();
     void cardClicked();
+    void timer_update();
 };
 #endif // VIEW_H

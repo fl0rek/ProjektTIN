@@ -2,13 +2,14 @@
 
 #include <QScreen>
 #include <QGraphicsTextItem>
-
+#include <fstream>
 
 void View::drawCard(unsigned x, unsigned y, View::Position p, bool floatingCard)
 {
     CardView *c = new CardView();
     c->setScale(scaleFactor);
     c->setPos(x, y);
+    c->setVisible(false);
     if(p == LEFT)
         c->setRotation(90);
     if(p == RIGHT)
@@ -24,20 +25,16 @@ void View::drawCard(unsigned x, unsigned y, View::Position p, bool floatingCard)
     scene->addItem(c);
 }
 
-
-void View::drawLabel(unsigned x, unsigned y, std::string text)
+void View::drawLabel(unsigned x, unsigned y)
 {
     QGraphicsTextItem *label = new QGraphicsTextItem;
     label->setPos(x, y);
-    label->setPlainText(QString::fromStdString(text));
     scene->addItem(label);
+    labels.push_back(label);
 }
 
-
-void View::drawCardsLine(unsigned ammount, std::vector<std::string> &nicks, View::Position p)
+void View::drawCardsLine(unsigned ammount, View::Position p)
 {
-    if(ammount > 3)
-        return;
     int beginX = 0, beginY = 0, dx = 0, dy = 0, textX = 0, textY = 0;
     switch(p)
     {
@@ -77,10 +74,7 @@ void View::drawCardsLine(unsigned ammount, std::vector<std::string> &nicks, View
         {
             drawCard(beginX + j * dx, beginY + j * dy, p, false);
             if(j == 2)
-            {
-                drawLabel(textX, textY, nicks.back());
-                nicks.pop_back();
-            }
+                drawLabel(textX, textY);
         }
         beginX += 5*dx;
         beginY += 5*dy;
@@ -88,28 +82,20 @@ void View::drawCardsLine(unsigned ammount, std::vector<std::string> &nicks, View
         textY += 5*dy;
     }
     if(user == PLAYER)
-    {
         setPlayerCards();
-        activatePlayerCards();
-    }
 }
 
-
-void View::drawCards(std::vector<std::string> nicks)
+void View::drawCards()
 {
     int i = 0;
-    int players = game->getPlayers().size();
+    int players = 12;
     while(players > 0)
     {
-        if(players >= 3)
-            drawCardsLine(3, nicks, static_cast<Position>(i));
-        else
-            drawCardsLine(players, nicks, static_cast<Position>(i));
+        drawCardsLine(3, static_cast<Position>(i));
         i++;
         players -= 3;
     }
 }
-
 
 void View::drawButtons()
 {
@@ -124,7 +110,6 @@ void View::drawButtons()
     }
 }
 
-
 void View::setPlayerCards()
 {
     for(unsigned i = 0; i < 3; i++)
@@ -134,20 +119,17 @@ void View::setPlayerCards()
     playerCards.insert(playerCards.begin(), floatingCards.front());
 }
 
-
 void View::activatePlayerCards()
 {
     for(CardView *c : playerCards)
         c->setCardActive(true);
 }
 
-
 void View::deactivatePlayerCards()
 {
     for(CardView *c : playerCards)
         c->setCardActive(false);
 }
-
 
 void View::initialize()
 {
@@ -171,19 +153,31 @@ void View::initialize()
     setFixedSize(windowSize, windowSize);
     setGeometry(0, 0, windowSize, windowSize);
     setFrameShape(QGraphicsView::NoFrame);
+
+    drawCards();
+    drawButtons();
     show();
 }
 
-
 void View::update(std::vector<Card> c, int player, Card floatingCard)
 {
-    if(c.size() < cards.size())
-        return;
+	std::vector<unsigned char> gs = game->gameState.serialize();
+    unsigned n = game->getPlayers().size() * 3;
+    for(unsigned i = 0; i < n; i++)
+        cards[i]->setVisible(true);
+
     unsigned i = 0;
-    for(CardView *card : cards)
+    for(Card card : c)
     {
-        card->update(c[i], user);
+        cards[i]->update(card, user);
         i++;
+    }
+
+    i = 0;
+    std::vector<int> ids = game->getPlayersIds();
+    for(int id : ids)
+    {
+        labels[i++]->setPlainText(QString::number(id));
     }
 
     if(player == 0)
@@ -201,6 +195,11 @@ void View::update(std::vector<Card> c, int player, Card floatingCard)
     if(user == PLAYER)
         for(CardView *card : playerCards)
             card->update(card->getCard(), OBSERVER);
+    if(user == PLAYER)
+        if(game->getCurrentPlayerId() == game->getPlayerId())
+            activatePlayerCards();
+        else
+            deactivatePlayerCards();
 }
 
 void View::endGame()
@@ -211,41 +210,34 @@ void View::endGame()
     msg.exec();
 }
 
-
 View::View()
 {
     initialize();
 }
 
-
 View::View(Game *g, unsigned u)
 {
-    user = User(u);
+    user = static_cast<User>(u);
     initialize();
     game = g;
+    QTimer *timer = new QTimer(this);
+    connect(timer, SIGNAL(timeout()), this, SLOT(timer_update()));
+    timer->start(100);
 }
-
-
+void View::timer_update()
+{
+    if(game->getIsStarted())
+        update();
+}
 View::~View()
 {
 
 }
 
-
-void View::start()
-{
-    game->start();
-    drawCards(getPlayersNicks(game->getPlayers()));
-    drawButtons();
-    update();
-}
-
-
 void View::setUser(unsigned u)
 {
     user = User(u);
 }
-
 
 void View::update()
 {
@@ -253,7 +245,6 @@ void View::update()
         endGame();
     update(game->getPlayersCards(), game->getCurrentPlayerIndex(), game->getFloatingCard());
 }
-
 
 void View::passCard()
 {
@@ -266,7 +257,6 @@ void View::passCard()
         }
 }
 
-
 void View::exchangeCard()
 {
     if(game->getPlayer()->getCanExchange())
@@ -274,7 +264,6 @@ void View::exchangeCard()
         game->exchangeCard();
     }
 }
-
 
 void View::cardClicked()
 {

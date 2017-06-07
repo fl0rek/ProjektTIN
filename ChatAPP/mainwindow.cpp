@@ -68,8 +68,9 @@ void MainWindow::sendToPipe(Message msg)
         for_each(full_data.begin(), full_data.end(), [](unsigned char c){std::cout << c;});
         std::cout<<std::endl;
 
-    }  
+  }  
     else
+
          full_data.pop_back();
 }
 

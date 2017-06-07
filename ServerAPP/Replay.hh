@@ -29,6 +29,14 @@ public:
 		log_warn("Unexpected game message received while in replay mode, ignoring");
 		return true;
 	}
+
+	void add_player(int client_id) {
+		log_warn("Unexpected game message received while in replay mode, ignoring");
+	}
+
+	void start_game() {
+		log_warn("Unexpected game message received while in replay mode, ignoring");
+	}
 private:
 
 	void replay_main() {

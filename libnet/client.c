@@ -11,14 +11,14 @@
 #include <fdebug.h>
 #include <netdb.h>
 #include <pthread.h>
+#include <signal.h>
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 
-
 client_info server[1];
 
-inline unsigned get_client_id(client_info *client) {
+unsigned get_client_id(client_info *client) {
 	UNUSED(client);
 	return 0;
 }
@@ -39,6 +39,30 @@ static void add_fd_to_select(int fd) {
 
 void clear_fd_select(int fd) {
 	FD_CLR(fd, &selects);
+}
+
+
+bool libnet_init_finished = false;
+pthread_cond_t libnet_ready = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t libnet_ready_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+bool libnet_wait_for_initialization_finish() {
+	if(libnet_init_finished)
+		return true;
+	check1(!pthread_mutex_lock(&libnet_ready_mutex), "lock libnet_ready_mutex");
+	check1(!pthread_cond_wait(&libnet_ready, &libnet_ready_mutex), "cond_wait libnet_ready");
+	check1(!pthread_mutex_unlock(&libnet_ready_mutex), "unlock libnet_ready_mutex");
+	return true;
+error:
+	return false;
+}
+
+static void notify_libnet_read() {
+	libnet_init_finished = true;
+
+	pthread_mutex_lock(&libnet_ready_mutex);
+	pthread_cond_signal(&libnet_ready);
+	pthread_mutex_unlock(&libnet_ready_mutex);
 }
 
 bool exiting = false;
@@ -85,6 +109,8 @@ static int libnet_client_main(const char *address, const char* service) {
 
 		check1(send_tag(server, TAG_HELO, 0, 0), "sending hello");
 
+
+		notify_libnet_read();
 		while(!exiting) {
 			log_info1("Waiting for server or selfpipie");
 			//send_tag(server, 0xee, 3, "foo");
@@ -120,12 +146,13 @@ error:
 
 bool libnet_send(const unsigned char tag, const size_t length,
 		const unsigned char *value) {
+	hexDump("message", value, length);
 	return send_tag(server, tag, length, value);
 }
 
 static void* libnet_main_pthread_wrapper(void * args) {
 	const char **params = ((const char**)args);
-	//TODO(florek) return value!
+
 	const char *address = params[0];
 	const char *service = params[1];
 
@@ -153,6 +180,9 @@ bool libnet_thread_shutdown() {
 	//TODO(florek) error handling
 	//TODO(florek) return val hadnling
 	check1(!pthread_join(libnet_thread, 0), "pthread_join libnet_thread");
+
+	signal(SIGQUIT, SIG_IGN);
+	kill(-getpid(), SIGQUIT); // kill all children
 	return true;
 error:
 	return false;

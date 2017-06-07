@@ -37,10 +37,15 @@ void handle_reader(int read_handle) {
 		// this is fucking retarted
 		unsigned char * buffer = new unsigned char[message_length];
 		memcpy(&buffer[0], tag, 4);
-		memcpy(&buffer[4], tag_length, 1);
-		memcpy(&buffer[5], flipping_flag, 1);
+		memcpy(&buffer[4], flipping_flag, 1);
+		memcpy(&buffer[5], tag_length, 1);
 		memcpy(&buffer[6], body, tag_length[0]);
-
+		std::cout<<"PRZYSZLOKURWA"<<std::endl;
+		for(int i =0; i < message_length; ++i)
+		{
+			std::cout<<int(buffer[i])<<" ";
+		}
+		std::cout<<"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$"<<std::endl;
 		notify_observers(tag, message_length, buffer);
 	}
 }
@@ -62,8 +67,11 @@ public:
 	}
 
 	virtual void notify(const unsigned  char tag[4], size_t length, unsigned char *value) {
-		if(!libnet_send(tag::game, length, value)) {
-			log_warn("Failed notifying clients, they'll hopefully catch up on next update");
+
+		if(util::tag_equal(tag, tag::game_tags::step)) {
+			if(!libnet_send(tag::game, length, value)) {
+				log_warn("Failed notifying clients, they'll hopefully catch up on next update");
+			}
 		}
 	}
 
@@ -120,6 +128,17 @@ public:
 	bool handle_game_message(const size_t length, const unsigned char* buffer) {
 		record_to_replay_file(length, buffer);
 
+		Tlv game_data(buffer, length);
+		if(game_data.isTagPresent(tag::game_tags::resync_request)) {
+
+			int client_id = util::get_client_id(game_data);
+
+			if(client_id < 0)
+				return true;
+
+			cs.request_whole_replay_for_client(client_id);
+		}
+
 		size_t written = 0;
 		while(written < length) {
 			ssize_t w =  write(write_handle, buffer + written, length - written);
@@ -154,6 +173,45 @@ public:
 		}
 		return true;
 
+	}
+
+	void add_player(int client_id) {
+		std::cout<<"ADDCLIENT"<<std::endl;
+		Tlv buffer;
+		unsigned char c[1] = {0};
+		buffer.add(tag::game_tags::add_client, 0, 1, c);
+		buffer.add(tag::internal_tags::client_id, 0, sizeof(client_id), reinterpret_cast<unsigned char*>(&client_id));
+		std::vector<unsigned char> data = buffer.getAllData();
+
+		size_t written = 0;
+		while(written < data.size()) {
+			ssize_t w =  write(write_handle, &data[0] + written, data.size() - written);
+			for_each(data.begin(), data.end(), [](auto c)
+			{
+				std::cout<<int(c)<<" ";
+			});
+			written += w;
+		}
+		std::cout<<data.size()<<"*******************************************************"<<std::endl;
+	}
+
+	void start_game() {
+		std::cout<<"GAMESTART"<<std::endl;
+		Tlv buffer;
+		unsigned char c[1] = {0};
+		buffer.add(tag::game_tags::start_game, 0, 1, c);
+		std::vector<unsigned char> data = buffer.getAllData();
+
+		size_t written = 0;
+		while(written < data.size()) {
+			ssize_t w =  write(write_handle, &data[0] + written, data.size() - written);
+			for_each(data.begin(), data.end(), [](auto c)
+			{
+				std::cout<<int(c)<<" ";
+			});
+			written += w;
+		}
+		std::cout<<data.size()<<"*******************************************************"<<std::endl;
 	}
 private:
 	int write_handle;

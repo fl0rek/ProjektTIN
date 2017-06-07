@@ -2,11 +2,8 @@
 #define GAME_H
 #include "card.h"
 #include "player.h"
-
-#include <boost/serialization/vector.hpp>
-#include <boost/serialization/strong_typedef.hpp>
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/archive/text_iarchive.hpp>
+#include "Tlv.h"
+#include "tags.h"
 
 /*
  * author Adrian Sobolewski
@@ -16,17 +13,10 @@
 
 class Game
 {
+    enum Mode {CLIENT, SERVER};
 public:
-    enum MessageType {NO_TYPE, PASS_CARD, EXCHANGE, END_GAME, GS_REQUEST, ADD_PLAYER, SERVER_START, INITIALIZE, INIT_FROM_GS, CLIENT_START, UPDATE, TERMINATE};
     class Deck
     {
-        friend class boost::serialization::access;
-        template<class Archive>
-        void serialize(Archive & ar, const unsigned int )
-        {
-            ar & cards;
-            ar & rejectedCards;
-        }
     public:
 
         /**
@@ -80,11 +70,14 @@ public:
          *      creates pairs of every Rank and Suit enums, adds them to cards vector and then shuffles the vector
          */
         void initialize();
+        std::vector<unsigned char> serialize();
         std::vector<Card> getCards();
         void setCards(const std::vector<Card> &value);
         bool operator == (const Deck &d) const;
         std::vector<Card> getCardsVector() const;
         std::vector<Card> getRejectedCards() const;
+        void setRejectedCards(const std::vector<Card> &value);
+
     private:
         std::vector<Card> cards;
         std::vector<Card> rejectedCards;
@@ -92,25 +85,12 @@ public:
 
     struct GameState
     {
-        friend class boost::serialization::access;
-        template<class Archive>
-        void serialize(Archive & ar, const unsigned int )
-        {
-            ar & players;
-            ar & winners;
-            ar & currentPlayer;
-            ar & deck;
-            ar & floatingCard;
-            ar & isStarted;
-            ar & isFinished;
-        }
-
         std::vector<Player*> players;
         std::vector<Player*> winners;
-        Player *currentPlayer;
+        int currentPlayerId = 0;
         Deck deck;
         Card floatingCard;
-        bool isStarted;
+        bool isStarted = false;
         bool isFinished = false;
 
         /**
@@ -166,7 +146,11 @@ public:
          * @return
          *      index
          */
-        int getCurrentPlayerIndex();
+        unsigned getCurrentPlayerIndex();
+        int getCurrentPlayerId();
+        unsigned getNextPlayerIndex();
+
+        Player *getCurrentPlayer();
 
         /**
          * @brief dealCards
@@ -181,29 +165,15 @@ public:
          *      player
          */
         void dealCard(Player *p);
+
+        std::vector<unsigned char> serialize();
+        std::vector<unsigned char> serializePlayers(std::vector<Player *> players);
     };
-
-    struct Message
-    {
-        friend class boost::serialization::access;
-        template<class Archive>
-        void serialize(Archive & ar, const unsigned int )
-        {
-            ar & t;
-            ar & gs;
-            ar & s;
-        }
-        //TODO inheritance/std::any
-        MessageType t;
-        GameState gs;
-        std::string s;
-     };
-
+    GameState gameState;
 private:
     const static int kMaxPlayers = 12;
-    GameState gameState;
-    Player *player;
-
+    unsigned playerId = 0;
+    Mode mode;
     /**
      * @brief initialize
      *      creates new deck and initializes it
@@ -288,13 +258,7 @@ public:
      */
     Game(GameState gameState);
 
-    /**
-     * @brief Game
-     *      invokes initialize and creates a player for local player
-     * @param id
-     *      local player id
-     */
-    Game(std::string id);
+    Game(int m);
 
     /**
      * @brief addPlayer
@@ -302,7 +266,7 @@ public:
      * @param id
      *      player id
      */
-    void addPlayer(std::string id);
+    void addPlayer(unsigned id);
 
     /**
      * @brief start
@@ -337,14 +301,14 @@ public:
      * @param s
      *      serialized Message
      */
-    void acceptMessage(std::string s);
+    void acceptMessage(Tlv &buffer);
 
     /**
      * @brief sendMessage
      *      serializes given Message and sends it on stdout
      * @param gs
      */
-    void sendMessage(Message msg);
+    void sendMessage(GameState msg, const unsigned char *t);
 
     /**
      * @brief serialize
@@ -353,7 +317,9 @@ public:
      * @return
      *      returns a string representing serialized Message
      */
-    std::string serialize(Message msg);
+//    std::string serialize(Message msg);
+//    std::string serialize(std::vector<Player*> p);
+//    std::string serialize(Player p);
 
     /**
      * @brief deserialize
@@ -362,19 +328,28 @@ public:
      * @return
      *      returns a Message deserialized from a string
      */
-    Message deserialize(std::string s);
+    GameState deserializeGameState(std::vector<unsigned char> data);
+    Deck deserializeDeck(std::vector<unsigned char> data);
+    std::vector<Player*> deserializePlayers(std::vector<unsigned char> data);
+    Player *deserializePlayer(std::vector<unsigned char> data);
+
 
     void getWholeGameStatus();
     void sendWholeGameStatus(std::string s);
     std::vector<Card> getPlayersCards();
-    int getCurrentPlayerIndex();
+    unsigned getCurrentPlayerIndex();
     Player *getCurrentPlayer();
-    Player *getPlayer();
-    void setPlayer();
+    int getCurrentPlayerId();
+    unsigned getPlayerId();
+    void setPlayerId(unsigned id);
     std::vector<Player*> getPlayers() const;
     bool getIsFinished() const;
+    bool getIsStarted() const;
     Card getFloatingCard() const;
     Deck getDeck() const;
+    Player *getPlayer() const;
+    void setPlayer(Player *value);
+    std::vector<int> getPlayersIds();
 };
 
 #endif // GAME_H

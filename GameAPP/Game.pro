@@ -12,9 +12,9 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 TARGET = Game
 TEMPLATE = app
-CONFIG  += c++11 widgets gui
-QMAKE_CXXFLAGS += -std=c++11
-INCLUDEPATH += /usr/include/boost/
+CONFIG  += c++14
+QMAKE_CXXFLAGS += -std=c++14
+INCLUDEPATH += /usr/include/boost/ ../libtlv/include/ ../include
 LIBS += -L/usr/include/boost -lboost_serialization
 #QMAKE_POST_LINK += ./GameApp/Tests
 # The following define makes your compiler emit warnings if you use
@@ -30,11 +30,12 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 
 SOURCES += main.cpp \
-    util.cpp \
+    ../libtlv/src/Tlv.cpp
 
 HEADERS  += \
-    util.h \
-    debug.h
+    debug.h \
+    ../libtlv/include/Tlv.h \
+    ../include/tags.h
 
 
 RESOURCES += \
