@@ -62,8 +62,10 @@ public:
 	}
 
 	virtual void notify(const unsigned  char tag[4], size_t length, unsigned char *value) {
-		if(!libnet_send(tag::game, length, value)) {
-			log_warn("Failed notifying clients, they'll hopefully catch up on next update");
+		if(util::tag_equal(tag, tag::game_tags::step)) {
+			if(!libnet_send(tag::game, length, value)) {
+				log_warn("Failed notifying clients, they'll hopefully catch up on next update");
+			}
 		}
 	}
 
@@ -171,6 +173,18 @@ public:
 		Tlv buffer;
 		buffer.add(tag::game_tags::add_client, 0, 1, 0);
 		buffer.add(tag::internal_tags::client_id, 0, sizeof(client_id), reinterpret_cast<unsigned char*>(&client_id));
+		std::vector<unsigned char> data = buffer.getAllData();
+
+		size_t written = 0;
+		while(written < data.size()) {
+			ssize_t w =  write(write_handle, &data[0] + written, data.size() - written);
+			written += w;
+		}
+	}
+
+	void start_game() {
+		Tlv buffer;
+		buffer.add(tag::game_tags::start_game, 0, 1, 0);
 		std::vector<unsigned char> data = buffer.getAllData();
 
 		size_t written = 0;

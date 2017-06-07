@@ -103,9 +103,11 @@ void load_player_keys(std::string fn) {
 }
 
 Clients::Client::State try_authenticate(uint64_t key) {
-
-	for(const auto k : keys) {
-		if(k == key) {
+	for(auto it = keys.begin(); it != keys.end(); it++) {
+		if(*it == key) {
+			using std::swap;
+			swap(*it, keys.back());
+			keys.pop_back();
 			return Clients::Client::Player;
 		}
 	}
@@ -152,6 +154,10 @@ void handle_internal_message(const unsigned char* buffer, const size_t length) {
 		}
 		if(c.isPlayer()) {
 			libnet_helper::sendPlayerHisId(client_id);
+			g->add_player(client_id);
+			if(authentication::keys.size() == 0) {
+				g->start_game();
+			}
 		}
 
 	}
