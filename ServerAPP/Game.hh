@@ -40,7 +40,6 @@ void handle_reader(int read_handle) {
 		memcpy(&buffer[4], flipping_flag, 1);
 		memcpy(&buffer[5], tag_length, 1);
 		memcpy(&buffer[6], body, tag_length[0]);
-		std::cout<<"PRZYSZLOKURWA"<<std::endl;
 		notify_observers(tag, message_length, buffer);
 	}
 }
