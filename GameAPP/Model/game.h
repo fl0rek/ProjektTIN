@@ -125,20 +125,12 @@ public:
 
         /**
          * @brief getPlayersCards
-         *      gets players cards vector in order directed by players vector
-         * @return
-         *      players cards vector
-         */
-        std::vector<Card> getPlayersCards();
-
-        /**
-         * @brief getPlayersCards
          *      gets players cards vector starting from provided player (the temporary players vector is shifted accordingly)
          * @param player
          *      player to be started
          * @return
          */
-        std::vector<Card> getPlayersCards(Player *player);
+        std::vector<Card> getPlayersCards();
 
         /**
          * @brief getCurrentPlayerIndex
@@ -172,23 +164,8 @@ public:
     GameState gameState;
 private:
     const static int kMaxPlayers = 12;
-    unsigned playerId = 0;
+    int playerId = 0;
     Mode mode;
-    /**
-     * @brief initialize
-     *      creates new deck and initializes it
-     */
-    void initialize();
-
-    /**
-     * @brief initialize
-     *      initializes from given GameState
-     * @param gs
-     *      GameState
-     */
-    void initialize(GameState gs);
-
-    void update(GameState gs);
 
     /**
      * @brief isValid
@@ -236,28 +213,14 @@ private:
      */
     bool checkDeck(GameState gs);
 
-    /**
-     * @brief requestGameState
-     *      sends a message requesting current GameState
-     */
-    void requestGameState();
-
-
 public:
-    /**
-     * @brief Game
-     *      creates an empty Game
-     */
+
     Game();
 
     /**
      * @brief Game
-     *      invokes initialize(GameState gs)
-     * @param gameState
-     *
+     *      creates an empty Game in a provided mode 0 - server 1 - client
      */
-    Game(GameState gameState);
-
     Game(int m);
 
     /**
@@ -266,7 +229,7 @@ public:
      * @param id
      *      player id
      */
-    void addPlayer(unsigned id);
+    void addPlayer(int id);
 
     /**
      * @brief start
@@ -276,7 +239,7 @@ public:
 
     /**
      * @brief passCard
-     *      simulates a passCard move on gameState and sends it in a Message
+     *      simulates a passCard move on gameState and sends it in a Tlv
      * @param c
      *      card
      */
@@ -284,71 +247,39 @@ public:
 
     /**
      * @brief exchangeCard
-     *      simulates a exchangeCard move on gameState and sends it in a Message
+     *      simulates a exchangeCard move on gameState and sends it in a Tlv
      */
     void exchangeCard();
 
-
-    /**
-     * @brief terminate
-     *      sends a message to clients about game end
-     */
-    void terminate();
-
     /**
      * @brief acceptMessage
-     *      receives a serialized Message and makes suitablbe action depending on message type
-     * @param s
-     *      serialized Message
+     *      receives a serialized Tlv and makes suitablbe action depending on message tag
      */
     void acceptMessage(Tlv &buffer);
 
     /**
      * @brief sendMessage
-     *      serializes given Message and sends it on stdout
+     *      serializes given GameState and sends it on stdout with a given tag in a Tlv buffer
      * @param gs
      */
     void sendMessage(GameState msg, const unsigned char *t);
 
-    /**
-     * @brief serialize
-     *      serializes a given Message to a string representation
-     * @param gs
-     * @return
-     *      returns a string representing serialized Message
-     */
-//    std::string serialize(Message msg);
-//    std::string serialize(std::vector<Player*> p);
-//    std::string serialize(Player p);
-
-    /**
-     * @brief deserialize
-     *      deserializes a given string to a Message
-     * @param s
-     * @return
-     *      returns a Message deserialized from a string
-     */
     GameState deserializeGameState(std::vector<unsigned char> data);
     Deck deserializeDeck(std::vector<unsigned char> data);
     std::vector<Player*> deserializePlayers(std::vector<unsigned char> data);
     Player *deserializePlayer(std::vector<unsigned char> data);
 
-
-    void getWholeGameStatus();
-    void sendWholeGameStatus(std::string s);
     std::vector<Card> getPlayersCards();
     unsigned getCurrentPlayerIndex();
     Player *getCurrentPlayer();
     int getCurrentPlayerId();
-    unsigned getPlayerId();
-    void setPlayerId(unsigned id);
+    int getPlayerId();
+    void setPlayerId(int id);
     std::vector<Player*> getPlayers() const;
     bool getIsFinished() const;
     bool getIsStarted() const;
     Card getFloatingCard() const;
     Deck getDeck() const;
-    Player *getPlayer() const;
-    void setPlayer(Player *value);
     std::vector<int> getPlayersIds();
 };
 
