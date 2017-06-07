@@ -67,6 +67,7 @@ public:
 	}
 
 	virtual void notify(const unsigned  char tag[4], size_t length, unsigned char *value) {
+
 		if(util::tag_equal(tag, tag::game_tags::step)) {
 			if(!libnet_send(tag::game, length, value)) {
 				log_warn("Failed notifying clients, they'll hopefully catch up on next update");
