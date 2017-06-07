@@ -33,6 +33,7 @@ void* chatAPP(void* ptr){
 }
 void* reader(void* ptr){
     int x;
+    char ms[550];
     while(1){
         if((x = read(STDIN_FILENO, ms, 550)) != -1){
         std::string msg(ms, x);
