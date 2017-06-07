@@ -41,7 +41,6 @@ bool libnet_init(const unsigned char *tags_to_register,
  */
 bool libnet_thread_start(const char *address, const char *service);
 
-// TODO(florek) better error handling
 /**
  * @brief
  * 	Send message

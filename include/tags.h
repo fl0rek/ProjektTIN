@@ -67,7 +67,6 @@ namespace tag {
 	constexpr unsigned char chat = 0x13;
 	namespace chat_tags {
 		constexpr unsigned char nick[] = { 0x13, 0x00, 0x00, 0x01 };
-		//TODO(Szymon? ktos od chatu anyway)
 		constexpr unsigned char message[] = { 0x13, 0x00, 0x00, 0x02 };
 	}
 }

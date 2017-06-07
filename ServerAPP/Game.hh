@@ -24,7 +24,7 @@ void notify_observers(const unsigned  char tag[4], size_t length, unsigned char 
 void handle_reader(int read_handle) {
 	while(!stop) {
 		unsigned char tag[4];
-		read(read_handle, tag, 4); //TODO real reading
+		read(read_handle, tag, 4);
 		unsigned char flipping_flag[1];
 		read(read_handle, flipping_flag, 1);
 		unsigned char tag_length[1];
@@ -34,7 +34,7 @@ void handle_reader(int read_handle) {
 
 		size_t message_length = sizeof tag + sizeof tag_length + sizeof flipping_flag + tag_length[0];
 
-		// this is fucking retarted
+		// this is quite dumb
 		unsigned char * buffer = new unsigned char[message_length];
 		memcpy(&buffer[0], tag, 4);
 		memcpy(&buffer[4], flipping_flag, 1);

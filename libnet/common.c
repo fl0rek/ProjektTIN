@@ -452,7 +452,7 @@ int handle_client_input(int sock_fd) {
 			message->length = bytes_to_read;
 
 			bool res = handle_message(client, message);
-			UNUSED(res); // TODO(florek): error checking
+			UNUSED(res);
 
 		} else {
 			debug1("Message body not yet ready or error receiving");
