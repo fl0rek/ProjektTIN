@@ -11,6 +11,7 @@
 #include <fdebug.h>
 #include <netdb.h>
 #include <pthread.h>
+#include <signal.h>
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -145,12 +146,13 @@ error:
 
 bool libnet_send(const unsigned char tag, const size_t length,
 		const unsigned char *value) {
+	hexDump("message", value, length);
 	return send_tag(server, tag, length, value);
 }
 
 static void* libnet_main_pthread_wrapper(void * args) {
 	const char **params = ((const char**)args);
-	//TODO(florek) return value!
+
 	const char *address = params[0];
 	const char *service = params[1];
 
@@ -178,6 +180,9 @@ bool libnet_thread_shutdown() {
 	//TODO(florek) error handling
 	//TODO(florek) return val hadnling
 	check1(!pthread_join(libnet_thread, 0), "pthread_join libnet_thread");
+
+	signal(SIGQUIT, SIG_IGN);
+	kill(-getpid(), SIGQUIT); // kill all children
 	return true;
 error:
 	return false;

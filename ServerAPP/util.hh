@@ -5,6 +5,8 @@
  */
 #pragma once
 
+#include <iomanip>
+
 std::mutex libnet_mutex;
 
 namespace util {

@@ -193,7 +193,6 @@ bool enqueue_message(tlv *message) {
 	return true;
 
 error:
-	// TODO(florek) error handling
 	return false;
 }
 
@@ -226,7 +225,7 @@ void client_disconnect(client_info *client) {
 	}
 
 	client->state = STATE_NONE; // disconnect ok, free the slot
-	client->fd = -1;
+	//client->fd = -1;
 	clear_fd_select(client->fd);
 	return;
 }
@@ -313,6 +312,7 @@ error:
 }
 
 bool handle_message(client_info *client, tlv *message) {
+	hexDump("origin message", message, message->length + sizeof(*message));
 	log_info("Got message from client %u, len %lu",
 			get_client_id(client), message->length);
 	if((message->tag & TAG_INTERNAL_MASK) == TAG_INTERNAL_MASK)
@@ -441,7 +441,6 @@ int handle_client_input(int sock_fd) {
 	if(client->read_status == READ_STATUS_WAITING_FOR_DATA) {
 		size_t bytes_to_read = client->internal_buffer[1]; // second byte of header is value size
 
-		//TODO(florek): something better?
 		message = malloc(sizeof * message + bytes_to_read * sizeof(char));
 		check_mem(message);
 
@@ -464,6 +463,8 @@ int handle_client_input(int sock_fd) {
 
 	return 0;
 error:
+	if(!client)
+		client->state = STATE_NONE;
 	if(message)
 		free(message);
 	return -1;

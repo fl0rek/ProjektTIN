@@ -46,9 +46,16 @@ bool handle_game_message(const unsigned char* buffer, const size_t length) {
 	log_info("Handling game message [%s:%lu]", buffer, length);
 
 	util::dump(buffer, length);
+	int client_id = -1;
 
-	Tlv game_data(buffer, length);
-	int client_id = util::get_client_id(game_data);
+	try {
+		Tlv game_data(buffer, length);
+		client_id = util::get_client_id(game_data);
+	} catch(TlvException &e) {
+		log_err("Received malformed game message");
+		return true; // it's not fatal error
+	}
+
 	if(client_id < 0)
 		return true; // ignore msg
 
@@ -64,22 +71,26 @@ bool handle_game_message(const unsigned char* buffer, const size_t length) {
 void handle_chat_message(const unsigned char* buffer, const size_t length) {
 	log_info("Handling chat message");
 
-	Tlv chat_data(buffer, length);
-	int client_id = util::get_client_id(chat_data);
+	try {
+		Tlv chat_data(Tlv(buffer, length));
+		int client_id = util::get_client_id(chat_data);
 
-	if(client_id < 0)
-		return;
+		if(client_id < 0)
+			return;
 
-	Clients::Client &c = cs.getClient(client_id);
+		Clients::Client &c = cs.getClient(client_id);
 
-	if(!c.isChatter()) {
-		libnet_helper::sendAuthError(client_id);
-	}
+		if(!c.isChatter()) {
+			libnet_helper::sendAuthError(client_id);
+		}
 
-	const char *name = c.getName().c_str();
+		const char *name = c.getName().c_str();
 
-	chat_data.add(tag::chat_tags::nick, 0, strlen(name),
+		chat_data.add(tag::chat_tags::nick, 0, strlen(name),
 			reinterpret_cast<const unsigned char*>(name));
+	} catch(TlvException &e) {
+		log_err("Malformed chat message");
+	}
 
 	{
 		std::lock_guard<std::mutex> lock{libnet_mutex};
@@ -119,6 +130,18 @@ Clients::Client::State try_authenticate(uint64_t key) {
 
 void handle_internal_message(const unsigned char* buffer, const size_t length) {
 	util::dump(buffer, length);
+	try {
+		Tlv internal_data(buffer, length);
+	} catch(TlvException &e) {
+		log_err("Malformed internal message");
+		return;
+		// I know this causes buffer to be parsed twice,
+		// but since this Tlv class lacks
+		// copy constructor this is necessary tradeoff
+		// We could wrap this whole function in try
+		// catch block but that would be overkill
+	}
+
 	Tlv internal_data(buffer, length);
 	int client_id = util::get_client_id(internal_data);
 
@@ -208,7 +231,13 @@ void parse_args(int argc, char* argv[]) {
 	}
 }
 
+void kill_all_children() {
+	signal(SIGQUIT, SIG_IGN);
+	kill(-getpid(), SIGQUIT); // kill all children
+}
+
 int main(int argc, char* argv[]) {
+	atexit(kill_all_children);
 	parse_args(argc, argv);
 
 	authentication::load_player_keys(runtime_info.key_file);
@@ -279,9 +308,10 @@ int main(int argc, char* argv[]) {
 				exit(-3);
 			case -ESIZE:
 				log_err("message too big for buffer, should not occur");
-				exit(-4);
-				// lol
+				//should not occour and is not fatal
 		}
 	}
+
+	libnet_thread_shutdown();
 }
 
