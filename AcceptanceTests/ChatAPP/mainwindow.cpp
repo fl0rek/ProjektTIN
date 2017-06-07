@@ -5,6 +5,7 @@
 #include <QtGui>
 #include <algorithm>
 #include <vector>
+
 #include "../libtlv/include/Tlv.h"
 #include "../include/tags.h"
 std::list<std::string> MainWindow::chat;
@@ -15,20 +16,30 @@ MainWindow::MainWindow( pthread_t process, QWidget *parent) :
     ui->textBrowser->setText("Chose your nickname: ");
 
     this->setFixedSize(290, 550);
-    this->userName = this->messageToSend = "";
+    srand(time(NULL));
+    this->userName = "user" + QString::number(rand() % 128);
+    this->messageToSend = "";
     this->currentTime = QDateTime::currentDateTime().time().toString(); 
     this->reader = process;
     QTimer *timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), this, SLOT(setText()));
     timer->start(100);
-
+    timerSender = new QTimer(this);
+    connect(timerSender, SIGNAL(timeout()), this, SLOT(acceptTest()));
+    timerSender->start(2000);
+    timerSender->setInterval(2000);
+    this->counter = 0;
+    this->of.open(this->userName.toStdString() + ".txt");
+    this->rcv.open(this->userName.toStdString() + "_rcv.txt");
 }
 
 MainWindow::~MainWindow()
 {
-    pthread_kill(this->reader, SIGKILL);
+    of.close();
+    rcv.close();
+    delete timerSender;
     delete ui;
-    delete timer;
+    pthread_kill(this->reader, SIGKILL);
 }
 
 void MainWindow::on_pushButton_clicked()
@@ -65,12 +76,11 @@ void MainWindow::sendToPipe(Message msg)
     buffer.add(tag::chat_tags::message, 0, serialize(msg).size(), reinterpret_cast<const unsigned char*>(serialize(msg).c_str()));
     std::vector<unsigned char> full_data = buffer.getAllData();
     if(full_data.size() < 120){
-        for_each(full_data.begin(), full_data.end(), [](unsigned char c){std::cout << c;});
+        for_each(full_data.begin(), full_data.end(), [this](unsigned char c){std::cout << c; of << c;});
         std::cout<<std::endl;
+        of<<std::endl;
 
-  }  
-    else
-
+    }  else
          full_data.pop_back();
 }
 
@@ -97,6 +107,7 @@ void MainWindow::getUserNickname()
         ui->textBrowser->clear();
         ui->textEdit->clear();
         ui->textBrowser->setTextColor(QColor(0, 0, 0));
+
     }
     else{
         this->userName = "";
@@ -121,7 +132,8 @@ void MainWindow::setText()
         {
                 chat.pop_front();
         }
-        for(auto it = chat.begin(); it != chat.end(); it++)
+        auto it = chat.begin();
+        for(; it != chat.end(); it++)
         {
             unsigned char data[it->size()];
             for(int i = 0; i < it->size(); ++i)
@@ -131,12 +143,14 @@ void MainWindow::setText()
             std::vector<unsigned char> tmp;
             tmp = buffor.getTagData(tag::chat_tags::message);
             std::string str((char*) tmp.data(), tmp.size());
+
             Message msg = deserialize(str);
             QString toDisplay = QString::fromStdString(msg.user) + "(" +QString::fromStdString(msg.time) + "): "+
             QString::fromStdString(msg.m);
             ui->textBrowser->append(toDisplay);
 
         }
+        this->rcv << *(--it) << std::endl;
     }
 }
 std::string MainWindow::serialize(Message msg)
@@ -155,4 +169,18 @@ Message MainWindow::deserialize(std::string s)
     boost::archive::text_iarchive ia(ss);
     ia >> msg;
     return msg;
+}
+void MainWindow::acceptTest()
+{
+    ++counter;
+    Message msg;
+    msg.user = this->userName.toStdString();
+    msg.time = "TEST:";
+    msg.m = "message from " + msg->user;
+    this->sendToPipe(msg);
+    if(counter >= 5){
+        this->timerSender->stop();
+        sleep(3);
+        this->~MainWindow();
+    }
 }
