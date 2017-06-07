@@ -9,6 +9,7 @@ date 25.05.2017
 #include <iostream>
 #include <vector>
 #include <thread>
+#include <algorithm>
 #include <fcntl.h>
 #include <sys/wait.h>
 #include <errno.h>
@@ -27,9 +28,9 @@ Client::Client(const char * const address, const char * const service, uint64_t 
 	: mode_(kGameMode), session_key_(session_key)
 {
 	connectToServer(address, service);
+	createPipes();
 	sendSessionKey();
 	receiveAuthentication();
-	createPipes();
 	startGameApp();
 	setNonblockPipes();
 }
@@ -38,12 +39,11 @@ void Client::sendSessionKey() const
 {
 	ssize_t size = sizeof(uint64_t);
 	unsigned char key[size];
-	memcpy(const_cast<void *>(static_cast<const void *>(&session_key_)), key, size);
+	memcpy(key, const_cast<void *>(static_cast<const void *>(&session_key_)), size);
 
 	Tlv buffer;
 	buffer.add(tag::internal_tags::authentication_code, 0, size, key);
 	vector<unsigned char> full_data = buffer.getAllData();
-	std::cout<<full_data.size()<<std::endl;
 	if(!sendToServer(tag::internal, full_data.data(), full_data.size()))
 		throw NetworkError("cant send session key");
 }
@@ -57,6 +57,10 @@ void Client::receiveAuthentication() const
 
 	if((size = libnet_wait_for_tag(tag::internal, data, kReceiveBufferSize, true)) > 0)
 	{
+		for(int i = 0; i < size; ++i)
+		{
+			std::cout<<int(data[i])<<" ";
+		}
 		Tlv buffer(data, size);
 		if((buffer.getTagData(tag::internal_tags::authentication_error).size() != 0))
 			throw NetworkError("server did not authenticate me");
@@ -114,7 +118,7 @@ void Client::setNonblockPipes()
 void Client::createGameAppPipes()
 {
 	if(dup2(pipefd_game_out_[0], STDIN_FILENO) < 0 || dup2(pipefd_game_in_[1], STDOUT_FILENO) < 0 
-			|| dup2(pipefd_game_in_[1], STDERR_FILENO) < 0 || close(pipefd_game_in_[0]) < 0
+		/*	|| dup2(pipefd_game_in_[1], STDERR_FILENO) < 0 */|| close(pipefd_game_in_[0]) < 0
 			|| close(pipefd_game_in_[1]) < 0 || close(pipefd_game_out_[0]) < 0 
 			|| close(pipefd_game_out_[1]) < 0)
 		throw ChildAppError("Cannot duplicate pipes");
@@ -124,7 +128,7 @@ void Client::createChatAppPipes()
 {
 
 	if(dup2(pipefd_chat_out_[0], STDIN_FILENO) < 0 || dup2(pipefd_chat_in_[1], STDOUT_FILENO) < 0 
-			|| dup2(pipefd_chat_in_[1], STDERR_FILENO) < 0 || close(pipefd_chat_in_[0]) < 0 
+		/*	|| dup2(pipefd_chat_in_[1], STDERR_FILENO) < 0 */|| close(pipefd_chat_in_[0]) < 0 
 			|| close(pipefd_chat_in_[1]) < 0 || close(pipefd_chat_out_[0]) < 0 
 			|| close(pipefd_chat_out_[1]))
 		throw ChildAppError("Cannot duplicate pipes");
@@ -177,12 +181,17 @@ void Client::connectToServer(const char * const address, const char * const serv
 {
 
 	if(!libnet_init(tags_to_register, sizeof(tags_to_register) / sizeof(*tags_to_register)) 
-			|| !libnet_thread_start(address, service))
+		|| !libnet_thread_start(address, service) || !libnet_wait_for_initialization_finish())
 		throw NetworkError("Cannot connect to server");
 }
 
 void inline Client::sendToGame(const unsigned char * const data, const ssize_t size) const
 {
+	std::cout<<"SENDTOGAME"<<size<<std::endl<<"^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^";
+	for(int i =0; i < size; ++i)
+	{
+		std::cout<<int(data[i])<<" ";
+	}
 	ssize_t write_size = write(pipefd_game_out_[1], data, size);
 
 	if(write_size < 0)
@@ -235,7 +244,10 @@ void Client::receiveFromGame(bool * const end_flag)
 //		changeToViewerMode();
 //	else
 		if(size > 0)
+		{
 			sendToServer(tag::game, data, size);
+			std::cout<<"SDASDA";
+		}
 	}
 	else
 		*end_flag = kClientEnd;
