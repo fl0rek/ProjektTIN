@@ -57,10 +57,6 @@ void Client::receiveAuthentication() const
 
 	if((size = libnet_wait_for_tag(tag::internal, data, kReceiveBufferSize, true)) > 0)
 	{
-		for(int i = 0; i < size; ++i)
-		{
-			std::cout<<int(data[i])<<" ";
-		}
 		Tlv buffer(data, size);
 		if((buffer.getTagData(tag::internal_tags::authentication_error).size() != 0))
 			throw NetworkError("server did not authenticate me");
@@ -237,7 +233,6 @@ void Client::receiveFromGame(bool * const end_flag)
 		if(size > 0)
 		{
 			sendToServer(tag::game, data, size);
-			std::cout<<"SDASDA";
 		}
 	}
 	else
