@@ -67,9 +67,7 @@ public:
 					log_warn("Could not send resync response to some clients, they'll probably rerequest?");
 				}
 			}
-
 		}
-
 		if(util::tag_equal(tag, tag::game_tags::step)) {
 			if(!libnet_send(tag::game, length, value)) {
 				log_warn("Could not send game state to some clients, let's hope they resync on next send or request resync manually");

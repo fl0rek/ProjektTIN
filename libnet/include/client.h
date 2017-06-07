@@ -91,4 +91,3 @@ bool libnet_wait_for_new_message();
 
 bool libnet_wait_for_initialization_finish();
 
-
