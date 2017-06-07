@@ -395,11 +395,6 @@ void Game::exchangeCard()
     sendMessage(gs, tag::game_tags::step);
 }
 
-//void Game::terminate()
-//{
-
-//}
-
 void Game::acceptMessage(Tlv &buffer)
 {
     GameState gs;
