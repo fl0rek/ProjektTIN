@@ -4,7 +4,6 @@
 #include "Model/game.h"
 #include "cardview.h"
 #include "button.h"
-#include "util.h"
 
 #include <QGraphicsScene>
 #include <QGraphicsView>

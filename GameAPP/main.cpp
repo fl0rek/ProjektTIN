@@ -47,7 +47,6 @@ void *gameApp(void *ptr)
     if(user != 2)
         v = new View(g, user);
     a.exec();
-
     pthread_exit(0);
 }
 
@@ -61,10 +60,14 @@ void *reader(void *)
         std::string msg(message, x);
 
         unsigned char data[msg.size()];
-        for(int i = 0; i < msg.size(); ++i)
+        for(unsigned i = 0; i < msg.size(); ++i)
             data[i] = static_cast<unsigned char>(msg[i]);
         Tlv buffer = Tlv(data, msg.size());
 
+        if(buffer.isTagPresent(tag::game_tags::terminate))
+            break;
+        if(!buffer.isTagPresent(tag::game_tags::invalid_step))
+            continue;
         g->acceptMessage(buffer);
         if(user != 2)
             v->update();
@@ -84,7 +87,7 @@ int main(int argc, char *argv[])
             exit(1);
             break;
         case 2:
-            if(user < 0 && user > 2)
+            if(user < 0 || user > 2)
             {
                 std::cout<<invalidArgs;
                 exit(1);
@@ -118,6 +121,9 @@ int main(int argc, char *argv[])
         pthreadJoinError(errno);
     if(pthread_join(game, NULL))
         pthreadJoinError(errno);
+
+    delete v;
+    delete g;
 
     return 0;
 }

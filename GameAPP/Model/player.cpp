@@ -10,14 +10,14 @@ Player::Player()
 }
 
 
-Player::Player(unsigned id)
+Player::Player(int id)
 {
     this->id = id;
     lastCard = std::make_pair(NO_RANK, NO_SUIT);
 }
 
 
-Player::Player(unsigned id, std::vector<Card> cards) : id(id), cards{ std::move(cards) }{}
+Player::Player(int id, std::vector<Card> cards) : id(id), cards{ std::move(cards) }{}
 
 
 void Player::giveCard(Card c)
@@ -73,6 +73,9 @@ bool Player::hasThree()
 std::vector<unsigned char> Player::serialize()
 {
     std::vector<unsigned char> data;
+    data.insert(data.begin(), id>>24);
+    data.insert(data.begin(), id>>16);
+    data.insert(data.begin(), id>>8);
     data.insert(data.begin(), id);
     data.insert(data.begin(), win);
     data.insert(data.begin(), canExchange);
@@ -89,12 +92,12 @@ std::vector<unsigned char> Player::serialize()
 }
 
 
-unsigned Player::getId() const
+int Player::getId() const
 {
     return id;
 }
 
-void Player::setId(unsigned value)
+void Player::setId(int value)
 {
     this->id = value;
 }

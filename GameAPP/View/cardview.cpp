@@ -1,6 +1,6 @@
 #include "cardview.h"
+
 #include <QDebug>
-#include <QKeyEvent>
 
 CardView::CardView(QGraphicsItem *parent): QGraphicsPixmapItem(parent)
 {
