@@ -223,6 +223,7 @@ public:
      */
     Game(int m);
 
+    ~Game();
     /**
      * @brief addPlayer
      *      adds a player to gameState

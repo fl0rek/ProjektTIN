@@ -292,15 +292,17 @@ std::vector<unsigned char> Game::GameState::serializePlayers(std::vector<Player*
  */
 Game::Game()
 {
-    addPlayer(1);
-    addPlayer(2);
-    playerId = 1;
-    start();
 }
 
 Game::Game(int m)
 {
     mode = static_cast<Mode>(m);
+}
+
+Game::~Game()
+{
+    std::vector<Player*>().swap(gameState.players);
+    std::vector<Player*>().swap(gameState.winners);
 }
 
 
