@@ -2,10 +2,7 @@
 
 #include <iostream>
 #include <algorithm>
-#include <cstdlib>
 #include <iterator>
-#include <sstream>
-#include <fstream>
 
 /*
  * Deck
@@ -191,22 +188,11 @@ void Game::GameState::addWinner(Player *p)
 
 std::vector<Card> Game::GameState::getPlayersCards()
 {
-    std::vector<Card> cards;
-    for(Player *p : players)
-        for(Card c : p->getCards())
-            if(!(c.first == floatingCard.first && c.second == floatingCard.second))
-                    cards.push_back(c);
-    return cards;
-}
-
-//TO UPDATE
-std::vector<Card> Game::GameState::getPlayersCards(Player *player)
-{
     std::vector<Player*> vec = players;
     std::vector<Card> cards;
     for(std::vector<Player*>::iterator it = vec.begin(); it != vec.end(); ++it)
     {
-        if((*it) == player)
+        if((*it) == getCurrentPlayer())
         {
             std::rotate(vec.begin(), it, vec.end());
             break;
@@ -306,7 +292,6 @@ std::vector<unsigned char> Game::GameState::serializePlayers(std::vector<Player*
  */
 Game::Game()
 {
-
 }
 
 Game::Game(int m)
@@ -314,27 +299,34 @@ Game::Game(int m)
     mode = static_cast<Mode>(m);
 }
 
+Game::~Game()
+{
+    std::vector<Player*>().swap(gameState.players);
+    std::vector<Player*>().swap(gameState.winners);
+}
+
 
 std::vector<int> Game::getPlayersIds()
 {
+    std::vector<Player*> vec = gameState.players;
     std::vector<int> playersIds;
-    for(Player *p : gameState.players)
+    for(std::vector<Player*>::iterator it = vec.begin(); it != vec.end(); ++it)
+    {
+        if((*it) == getCurrentPlayer())
+        {
+            std::rotate(vec.begin(), it, vec.end());
+            break;
+        }
+    }
+    for(Player *p : vec)
         playersIds.push_back(p->getId());
     return playersIds;
 }
 
-void Game::initialize()
-{
-    gameState.deck = Deck();
-    gameState.deck.initialize();
-}
-
-// TO check
 bool Game::isValid(GameState gs)
 {
     return checkPlayers(gs) && checkCurrentPlayer(gs) && checkCards(gs);
 }
-
 
 bool Game::checkPlayers(Game::GameState gs)
 {
@@ -366,13 +358,7 @@ bool Game::checkDeck(Game::GameState gs)
     return gs.deck == gameState.deck;
 }
 
-void Game::requestGameState()
-{
-    GameState gs;
-    sendMessage(gs, tag::game_tags::resync_request);
-}
-
-void Game::addPlayer(unsigned id)
+void Game::addPlayer(int id)
 {
     if(gameState.players.size() < kMaxPlayers)
     {
@@ -409,12 +395,6 @@ void Game::exchangeCard()
     sendMessage(gs, tag::game_tags::step);
 }
 
-void Game::terminate()
-{
-
-}
-
-//TODO - just a early version
 void Game::acceptMessage(Tlv &buffer)
 {
     GameState gs;
@@ -452,51 +432,26 @@ void Game::acceptMessage(Tlv &buffer)
     {
         if(buffer.isTagPresent(tag::game_tags::step))
         {
-		auto v = buffer.getTagData(tag::game_tags::step);
             gs = deserializeGameState(buffer.getTagData(tag::game_tags::step));
-		std::ofstream s("/home/user/text.txt");
-		for(int i =0;i<v.size(); ++i)
-			s<<int(v[i])<<" ";
             gameState = gs;
         }
     }
 
 }
 
-//TODO - it's just sending a message to be accepted by another game instance
+
 void Game::sendMessage(GameState msg, const unsigned char *t)
 {
     std::vector<unsigned char> data = msg.serialize();
     Tlv buffer;
     buffer.add(t, 0, data.size(), data.data());
     std::vector<unsigned char> full_buffer = buffer.getAllData();
-		std::ofstream s("/home/user/tt.txt");
-	for(int i =0;i<full_buffer.size();++i)
-		s<<int(full_buffer[i])<<" ";
-	
     for_each(full_buffer.begin(), full_buffer.end(), [](auto element)
     {
          std::cout<<element;
     });
     std::cout<<std::endl;
 }
-
-//std::vector<unsigned char> Game::Message::serialize()
-//{
-//    std::vector<unsigned char> data;
-//    std::vector<unsigned char> d = gs.serialize();
-//    for(std::vector<unsigned char>::iterator it = --d.end(); it >= d.begin(); it--)
-//        data.insert(data.begin(), (*it));
-//    data.insert(data.begin(), id);
-//    return data;
-//}
-
-//Game::Message Game::deserialize(std::vector<unsigned char> data)
-//{
-//    Message msg;
-//    msg.gs = deserializeGameState(data);
-//    return msg;
-//}
 
 Game::GameState Game::deserializeGameState(std::vector<unsigned char> data)
 {
@@ -597,7 +552,6 @@ std::vector<Player *> Game::deserializePlayers(std::vector<unsigned char> data)
         players.push_back(deserializePlayer(playerData));
         data.erase(first, last);
     }
-
     return players;
 }
 
@@ -667,12 +621,12 @@ int Game::getCurrentPlayerId()
 }
 
 
-unsigned Game::getPlayerId()
+int Game::getPlayerId()
 {
     return playerId;
 }
 
-void Game::setPlayerId(unsigned id)
+void Game::setPlayerId(int id)
 {
     playerId = id;
 }
@@ -704,9 +658,4 @@ Card Game::getFloatingCard() const
 Game::Deck Game::getDeck() const
 {
     return gameState.deck;
-}
-
-Player *Game::getPlayer() const
-{
-
 }

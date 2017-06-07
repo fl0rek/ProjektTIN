@@ -3,6 +3,7 @@
 #include <QScreen>
 #include <QGraphicsTextItem>
 #include <fstream>
+#include <QDebug>
 
 void View::drawCard(unsigned x, unsigned y, View::Position p, bool floatingCard)
 {
@@ -81,8 +82,6 @@ void View::drawCardsLine(unsigned ammount, View::Position p)
         textX += 5*dx;
         textY += 5*dy;
     }
-    if(user == PLAYER)
-        setPlayerCards();
 }
 
 void View::drawCards()
@@ -112,11 +111,12 @@ void View::drawButtons()
 
 void View::setPlayerCards()
 {
+    unsigned n = game->getCurrentPlayerIndex();
     for(unsigned i = 0; i < 3; i++)
     {
-        playerCards.insert(playerCards.begin(), cards[i]);
+        playerCards.insert(playerCards.begin(), cards[n * 3 + i]);
     }
-    playerCards.insert(playerCards.begin(), floatingCards.front());
+    playerCards.insert(playerCards.begin(), floatingCards.at(n));
 }
 
 void View::activatePlayerCards()
@@ -161,7 +161,6 @@ void View::initialize()
 
 void View::update(std::vector<Card> c, int player, Card floatingCard)
 {
-	std::vector<unsigned char> gs = game->gameState.serialize();
     unsigned n = game->getPlayers().size() * 3;
     for(unsigned i = 0; i < n; i++)
         cards[i]->setVisible(true);
@@ -220,10 +219,13 @@ View::View(Game *g, unsigned u)
     user = static_cast<User>(u);
     initialize();
     game = g;
+    if(user == PLAYER)
+        setPlayerCards();
     QTimer *timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), this, SLOT(timer_update()));
     timer->start(100);
 }
+
 void View::timer_update()
 {
     if(game->getIsStarted())
@@ -259,7 +261,7 @@ void View::passCard()
 
 void View::exchangeCard()
 {
-    if(game->getPlayer()->getCanExchange())
+    if(game->getCurrentPlayer()->getCanExchange())
     {
         game->exchangeCard();
     }

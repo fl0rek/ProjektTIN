@@ -16,7 +16,7 @@ Button::Button(int x, int y, QString s, QGraphicsItem *parent): QGraphicsRectIte
     setAcceptHoverEvents(true);
 }
 
-//to check - not sure if this works without parameter name
+
 void Button::mousePressEvent(QGraphicsSceneMouseEvent *)
 {
     emit clicked();
