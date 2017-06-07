@@ -23,10 +23,10 @@ MainWindow::MainWindow( pthread_t process, QWidget *parent) :
     this->reader = process;
     QTimer *timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), this, SLOT(setText()));
-    timer->start(200);
+    timer->start(100);
     timerSender = new QTimer(this);
     connect(timerSender, SIGNAL(timeout()), this, SLOT(acceptTest()));
-    timerSender->start(100);
+    timerSender->start(2000);
     timerSender->setInterval(2000);
     this->counter = 0;
     this->of.open(this->userName.toStdString() + ".txt");
@@ -175,8 +175,8 @@ void MainWindow::acceptTest()
     ++counter;
     Message msg;
     msg.user = this->userName.toStdString();
-    msg.time = "(TEST):";
-    msg.m = "message ";
+    msg.time = "TEST:";
+    msg.m = "message from " + msg->user;
     this->sendToPipe(msg);
     if(counter >= 5){
         this->timerSender->stop();
