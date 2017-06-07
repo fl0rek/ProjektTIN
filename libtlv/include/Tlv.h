@@ -73,6 +73,7 @@ class Tlv {
 		static unsigned int getTag(const unsigned char a, const unsigned char b,
 				const unsigned char c, const unsigned char d);
 		static unsigned int getTag(const unsigned char tag[4]);
+		Tlv(Tlv & tlv) = delete;
 	private:
 		/**
 		 * structure representing node of Tlv Object
