@@ -17,21 +17,21 @@ bool checkArgs(int argc, char ** argv)
 {
 	if(argc != 3 && argc != 4)
 		return false;
-	cout<<"iloscgit"<<endl;
+
 	if(!regex_match(argv[1], regex("\\d\\d\?\\d\?\\.\\d\\d\?\\d\?\\.\\d\\d\?\\d\?\\.\\d\\d\?\\d\?")))
 		return false;
-	cout<<"ipgit"<<endl;
+
 	if(!regex_match(argv[2], regex("\\d\\d\\d\\d\\d\?")))
 		return false;
 
-	cout<<"servicetorchegit"<<endl;
+
 	int service = stoi(argv[2]);
-	cout<<"servicewartoscd"<<service<<endl;
+
 
 	if(service <= 1024 || service >= 65535)
 		return false;
 
-	cout<<"servicegit"<<endl;
+
 	if(argc == 4)
 	{
 		uint64_t key = strtoull(argv[3], nullptr, 10);
