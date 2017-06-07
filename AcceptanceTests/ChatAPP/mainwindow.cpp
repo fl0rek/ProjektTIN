@@ -176,7 +176,7 @@ void MainWindow::acceptTest()
     Message msg;
     msg.user = this->userName.toStdString();
     msg.time = "TEST:";
-    msg.m = "message from " + msg->user;
+    msg.m = "message";
     this->sendToPipe(msg);
     if(counter >= 5){
         this->timerSender->stop();
