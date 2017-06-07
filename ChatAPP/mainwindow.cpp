@@ -127,7 +127,7 @@ void MainWindow::setText()
             for(int i = 0; i < it->size(); ++i)
                 data[i] = static_cast<unsigned char>(static_cast<unsigned int>((*it)[i]));
 
-            Tlv buffor = Tlv(data, it->size());
+            Tlv buffor(data, it->size());
             std::vector<unsigned char> tmp;
             tmp = buffor.getTagData(tag::chat_tags::message);
             std::string str((char*) tmp.data(), tmp.size());
