@@ -30,11 +30,9 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 
 SOURCES += main.cpp \
-    util.cpp \
     ../libtlv/src/Tlv.cpp
 
 HEADERS  += \
-    util.h \
     debug.h \
     ../libtlv/include/Tlv.h \
     ../include/tags.h
