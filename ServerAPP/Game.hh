@@ -40,7 +40,12 @@ void handle_reader(int read_handle) {
 		memcpy(&buffer[4], flipping_flag, 1);
 		memcpy(&buffer[5], tag_length, 1);
 		memcpy(&buffer[6], body, tag_length[0]);
-
+		std::cout<<"PRZYSZLOKURWA"<<std::endl;
+		for(int i =0; i < message_length; ++i)
+		{
+			std::cout<<int(buffer[i])<<" ";
+		}
+		std::cout<<"$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$"<<std::endl;
 		notify_observers(tag, message_length, buffer);
 	}
 }
@@ -170,28 +175,42 @@ public:
 	}
 
 	void add_player(int client_id) {
+		std::cout<<"ADDCLIENT"<<std::endl;
 		Tlv buffer;
-		buffer.add(tag::game_tags::add_client, 0, 1, 0);
+		unsigned char c[1] = {0};
+		buffer.add(tag::game_tags::add_client, 0, 1, c);
 		buffer.add(tag::internal_tags::client_id, 0, sizeof(client_id), reinterpret_cast<unsigned char*>(&client_id));
 		std::vector<unsigned char> data = buffer.getAllData();
 
 		size_t written = 0;
 		while(written < data.size()) {
 			ssize_t w =  write(write_handle, &data[0] + written, data.size() - written);
+			for_each(data.begin(), data.end(), [](auto c)
+			{
+				std::cout<<int(c)<<" ";
+			});
 			written += w;
 		}
+		std::cout<<data.size()<<"*******************************************************"<<std::endl;
 	}
 
 	void start_game() {
+		std::cout<<"GAMESTART"<<std::endl;
 		Tlv buffer;
-		buffer.add(tag::game_tags::start_game, 0, 1, 0);
+		unsigned char c[1] = {0};
+		buffer.add(tag::game_tags::start_game, 0, 1, c);
 		std::vector<unsigned char> data = buffer.getAllData();
 
 		size_t written = 0;
 		while(written < data.size()) {
 			ssize_t w =  write(write_handle, &data[0] + written, data.size() - written);
+			for_each(data.begin(), data.end(), [](auto c)
+			{
+				std::cout<<int(c)<<" ";
+			});
 			written += w;
 		}
+		std::cout<<data.size()<<"*******************************************************"<<std::endl;
 	}
 private:
 	int write_handle;
