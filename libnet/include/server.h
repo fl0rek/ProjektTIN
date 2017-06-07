@@ -21,7 +21,6 @@ bool libnet_init(const unsigned char *tags_to_register,
 		const unsigned tags_to_register_number)
 	__attribute__((warn_unused_result));
 
-// TODO(florek) better error handling
 /**
  * @brief
  * 	Send message

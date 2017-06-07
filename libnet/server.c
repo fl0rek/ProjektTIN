@@ -249,7 +249,6 @@ error:
 }
 
 static void* libnet_main_pthread_wrapper(void * args) {
-	//TODO(florek) return value!
 	int *exit_status = malloc(sizeof exit_status);
 	*exit_status = libnet_main(*(int *)args);
 	pthread_exit((void*)exit_status);
@@ -259,7 +258,6 @@ static void* libnet_main_pthread_wrapper(void * args) {
 pthread_t libnet_thread;
 
 bool libnet_thread_start(int port) {
-	//TODO(florek) better error handling?
 	int *params = malloc(sizeof port);
 	check_mem(params);
 	*params = port;
@@ -273,8 +271,6 @@ error:
 bool libnet_thread_shutdown() {
 	exiting = true;
 	check1(notify_selfpipe(selfpipe_write_end) >= 0, "selfpipe write");
-	//TODO(florek) error handling
-	//TODO(florek) return val hadnling
 	int *exit_status;
 	check1(!pthread_join(libnet_thread, (void**)&exit_status), "pthread_join libnet_thread");
 

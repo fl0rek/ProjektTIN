@@ -177,8 +177,6 @@ error:
 bool libnet_thread_shutdown() {
 	exiting = true;
 	check1(notify_selfpipe(selfpipe_write_end) >= 0, "selfpipe write");
-	//TODO(florek) error handling
-	//TODO(florek) return val hadnling
 	check1(!pthread_join(libnet_thread, 0), "pthread_join libnet_thread");
 
 	signal(SIGQUIT, SIG_IGN);
