@@ -32,12 +32,16 @@ void* chatAPP(void* ptr){
     pthread_exit(0);
 }
 void* reader(void* ptr){
-    char ms[550];
+    int x;
     while(1){
-        int x = read(STDIN_FILENO, ms, 550);
+        if((x = read(STDIN_FILENO, ms, 550)) != -1){
         std::string msg(ms, x);
         MainWindow::readFromPipe(msg);
+        }
+        else
+            break;
     }
+    pthread_kill(chat, SIGKILL);
     pthread_exit(0);
 }
 
