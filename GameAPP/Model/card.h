@@ -1,7 +1,6 @@
 #ifndef CARD_H
 #define CARD_H
 #include <utility>
-#include <boost/serialization/utility.hpp>
 
 /*
  * author Adrian Sobolewski

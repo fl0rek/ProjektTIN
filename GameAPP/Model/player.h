@@ -3,8 +3,6 @@
 #include "card.h"
 
 #include <vector>
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
 
 /*
  * author Adrian Sobolewski
@@ -14,7 +12,7 @@
 
 class Player
 {
-    unsigned id;
+    int id;
     std::vector<Card> cards;
     Card lastCard;
 	bool win = false;
@@ -31,7 +29,7 @@ public:
      *      creates a player with given nick/id
      * @param nick
      */
-    Player(unsigned id);
+    Player(int id);
 
     /**
      * @brief Player
@@ -39,7 +37,7 @@ public:
      * @param nick
      * @param cards
      */
-    Player(unsigned id, std::vector<Card> cards);
+    Player(int id, std::vector<Card> cards);
 
     /**
      * @brief giveCard
@@ -76,8 +74,8 @@ public:
 
     std::vector<unsigned char> serialize();
 
-    unsigned getId() const;
-    void setId(unsigned value);
+    int getId() const;
+    void setId(int value);
     std::vector<Card> getCards() const;
 	void setCards(const std::vector<Card> &value);
 	Card getLastCard();

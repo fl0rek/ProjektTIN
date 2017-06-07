@@ -2,7 +2,6 @@
 #define GAME_H
 #include "card.h"
 #include "player.h"
-#include "util.h"
 #include "Tlv.h"
 #include "tags.h"
 
@@ -88,7 +87,7 @@ public:
     {
         std::vector<Player*> players;
         std::vector<Player*> winners;
-        unsigned currentPlayerId;
+        int currentPlayerId;
         Deck deck;
         Card floatingCard;
         bool isStarted;
@@ -148,7 +147,7 @@ public:
          *      index
          */
         unsigned getCurrentPlayerIndex();
-        unsigned getCurrentPlayerId();
+        int getCurrentPlayerId();
         unsigned getNextPlayerIndex();
 
         Player *getCurrentPlayer();
@@ -170,15 +169,6 @@ public:
         std::vector<unsigned char> serialize();
         std::vector<unsigned char> serializePlayers(std::vector<Player *> players);
     };
-
-    struct Message
-    {
-        //MessageType t;
-        GameState gs;
-        char id;
-        std::vector<unsigned char> serialize();
-     };
-
 private:
     const static int kMaxPlayers = 12;
     GameState gameState;
@@ -277,7 +267,7 @@ public:
      * @param id
      *      player id
      */
-    void addPlayer(char id);
+    void addPlayer(unsigned id);
 
     /**
      * @brief start
@@ -319,7 +309,7 @@ public:
      *      serializes given Message and sends it on stdout
      * @param gs
      */
-    void sendMessage(Message msg, const unsigned char *t);
+    void sendMessage(GameState msg, const unsigned char *t);
 
     /**
      * @brief serialize
@@ -328,9 +318,9 @@ public:
      * @return
      *      returns a string representing serialized Message
      */
-    std::string serialize(Message msg);
-    std::string serialize(std::vector<Player*> p);
-    std::string serialize(Player p);
+//    std::string serialize(Message msg);
+//    std::string serialize(std::vector<Player*> p);
+//    std::string serialize(Player p);
 
     /**
      * @brief deserialize
@@ -339,7 +329,6 @@ public:
      * @return
      *      returns a Message deserialized from a string
      */
-    Message deserialize(std::vector<unsigned char> data);
     GameState deserializeGameState(std::vector<unsigned char> data);
     Deck deserializeDeck(std::vector<unsigned char> data);
     std::vector<Player*> deserializePlayers(std::vector<unsigned char> data);
@@ -349,8 +338,9 @@ public:
     void getWholeGameStatus();
     void sendWholeGameStatus(std::string s);
     std::vector<Card> getPlayersCards();
-    short getCurrentPlayerIndex();
+    unsigned getCurrentPlayerIndex();
     Player *getCurrentPlayer();
+    int getCurrentPlayerId();
     unsigned getPlayerId();
     void setPlayerId(unsigned id);
     std::vector<Player*> getPlayers() const;
@@ -359,7 +349,7 @@ public:
     Deck getDeck() const;
     Player *getPlayer() const;
     void setPlayer(Player *value);
-    std::vector<unsigned> getPlayersIds();
+    std::vector<int> getPlayersIds();
 };
 
 #endif // GAME_H

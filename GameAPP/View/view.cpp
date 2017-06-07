@@ -81,10 +81,7 @@ void View::drawCardsLine(unsigned ammount, View::Position p)
         textY += 5*dy;
     }
     if(user == PLAYER)
-    {
         setPlayerCards();
-        activatePlayerCards();
-    }
 }
 
 void View::drawCards()
@@ -175,10 +172,10 @@ void View::update(std::vector<Card> c, int player, Card floatingCard)
     }
 
     i = 0;
-    std::vector<unsigned> ids = game->getPlayersIds();
-    for(unsigned id : ids)
+    std::vector<int> ids = game->getPlayersIds();
+    for(int id : ids)
     {
-        labels[i]->setPlainText(QString::number(id));
+        labels[i++]->setPlainText(QString::number(id));
     }
 
     if(player == 0)
@@ -196,6 +193,11 @@ void View::update(std::vector<Card> c, int player, Card floatingCard)
     if(user == PLAYER)
         for(CardView *card : playerCards)
             card->update(card->getCard(), OBSERVER);
+    if(user == PLAYER)
+        if(game->getCurrentPlayerId() == game->getPlayerId())
+            activatePlayerCards();
+        else
+            deactivatePlayerCards();
 
 }
 
