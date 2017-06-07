@@ -187,11 +187,6 @@ void Client::connectToServer(const char * const address, const char * const serv
 
 void inline Client::sendToGame(const unsigned char * const data, const ssize_t size) const
 {
-	std::cout<<"SENDTOGAME"<<size<<std::endl<<"^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^";
-	for(int i =0; i < size; ++i)
-	{
-		std::cout<<int(data[i])<<" ";
-	}
 	ssize_t write_size = write(pipefd_game_out_[1], data, size);
 
 	if(write_size < 0)
@@ -239,10 +234,6 @@ void Client::receiveFromGame(bool * const end_flag)
 
 		if(size < 0 && errno != EAGAIN)
 			throw ChildAppError("Problem with pipe, cannot read from game");
-//TODO
-//	if(endgame)
-//		changeToViewerMode();
-//	else
 		if(size > 0)
 		{
 			sendToServer(tag::game, data, size);
