@@ -87,10 +87,10 @@ public:
     {
         std::vector<Player*> players;
         std::vector<Player*> winners;
-        int currentPlayerId;
+        int currentPlayerId = 0;
         Deck deck;
         Card floatingCard;
-        bool isStarted;
+        bool isStarted = false;
         bool isFinished = false;
 
         /**
@@ -169,10 +169,9 @@ public:
         std::vector<unsigned char> serialize();
         std::vector<unsigned char> serializePlayers(std::vector<Player *> players);
     };
+    GameState gameState;
 private:
     const static int kMaxPlayers = 12;
-    GameState gameState;
-    Player *player;
     unsigned playerId = 0;
     Mode mode;
     /**
@@ -302,7 +301,7 @@ public:
      * @param s
      *      serialized Message
      */
-    void acceptMessage(Tlv buffer);
+    void acceptMessage(Tlv &buffer);
 
     /**
      * @brief sendMessage
@@ -345,6 +344,7 @@ public:
     void setPlayerId(unsigned id);
     std::vector<Player*> getPlayers() const;
     bool getIsFinished() const;
+    bool getIsStarted() const;
     Card getFloatingCard() const;
     Deck getDeck() const;
     Player *getPlayer() const;

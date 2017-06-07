@@ -165,5 +165,6 @@ public slots:
     void passCard();
     void exchangeCard();
     void cardClicked();
+    void timer_update();
 };
 #endif // VIEW_H

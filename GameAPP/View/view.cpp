@@ -2,6 +2,7 @@
 
 #include <QScreen>
 #include <QGraphicsTextItem>
+#include <fstream>
 
 void View::drawCard(unsigned x, unsigned y, View::Position p, bool floatingCard)
 {
@@ -160,6 +161,7 @@ void View::initialize()
 
 void View::update(std::vector<Card> c, int player, Card floatingCard)
 {
+	std::vector<unsigned char> gs = game->gameState.serialize();
     unsigned n = game->getPlayers().size() * 3;
     for(unsigned i = 0; i < n; i++)
         cards[i]->setVisible(true);
@@ -198,7 +200,6 @@ void View::update(std::vector<Card> c, int player, Card floatingCard)
             activatePlayerCards();
         else
             deactivatePlayerCards();
-
 }
 
 void View::endGame()
@@ -219,8 +220,15 @@ View::View(Game *g, unsigned u)
     user = static_cast<User>(u);
     initialize();
     game = g;
+    QTimer *timer = new QTimer(this);
+    connect(timer, SIGNAL(timeout()), this, SLOT(timer_update()));
+    timer->start(100);
 }
-
+void View::timer_update()
+{
+    if(game->getIsStarted())
+        update();
+}
 View::~View()
 {
 
