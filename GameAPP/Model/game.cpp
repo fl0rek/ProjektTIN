@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <iterator>
 #include <sstream>
+#include <fstream>
 
 /*
  * Deck
@@ -314,16 +315,6 @@ Game::Game(int m)
 }
 
 
-Player *Game::getPlayer() const
-{
-    return player;
-}
-
-void Game::setPlayer(Player *value)
-{
-    player = value;
-}
-
 std::vector<int> Game::getPlayersIds()
 {
     std::vector<int> playersIds;
@@ -424,7 +415,7 @@ void Game::terminate()
 }
 
 //TODO - just a early version
-void Game::acceptMessage(Tlv buffer)
+void Game::acceptMessage(Tlv &buffer)
 {
     GameState gs;
     if(buffer.isTagPresent(tag::internal_tags::client_id))
@@ -433,7 +424,7 @@ void Game::acceptMessage(Tlv buffer)
         int id = (c[0] << 24) | (c[1] << 16) | (c[2] << 8) | c[3];
         playerId = id;
     }
-    else if(mode == SERVER)
+    if(mode == SERVER)
     {
         if(buffer.isTagPresent(tag::game_tags::add_client))
         {
@@ -447,7 +438,7 @@ void Game::acceptMessage(Tlv buffer)
         }
         if(buffer.isTagPresent(tag::game_tags::step))
         {
-            gs = deserializeGameState(buffer.getAllData());
+            gs = deserializeGameState(buffer.getTagData(tag::game_tags::step));
             if(isValid(gs))
                 if(!gs.isFinished)
                     sendMessage(gs, tag::game_tags::step);
@@ -457,11 +448,15 @@ void Game::acceptMessage(Tlv buffer)
                 sendMessage(gs, tag::game_tags::invalid_step);
         }
     }
-    else if(mode == CLIENT)
+    if(mode == CLIENT)
     {
         if(buffer.isTagPresent(tag::game_tags::step))
         {
-            gs = deserializeGameState(buffer.getAllData());
+		auto v = buffer.getTagData(tag::game_tags::step);
+            gs = deserializeGameState(buffer.getTagData(tag::game_tags::step));
+		std::ofstream s("/home/user/text.txt");
+		for(int i =0;i<v.size(); ++i)
+			s<<int(v[i])<<" ";
             gameState = gs;
         }
     }
@@ -475,6 +470,10 @@ void Game::sendMessage(GameState msg, const unsigned char *t)
     Tlv buffer;
     buffer.add(t, 0, data.size(), data.data());
     std::vector<unsigned char> full_buffer = buffer.getAllData();
+		std::ofstream s("/home/user/tt.txt");
+	for(int i =0;i<full_buffer.size();++i)
+		s<<int(full_buffer[i])<<" ";
+	
     for_each(full_buffer.begin(), full_buffer.end(), [](auto element)
     {
          std::cout<<element;
@@ -647,7 +646,7 @@ Player *Game::deserializePlayer(std::vector<unsigned char> data)
 
 std::vector<Card> Game::getPlayersCards()
 {
-    return gameState.getPlayersCards(player);
+    return gameState.getPlayersCards();
 }
 
 
@@ -690,6 +689,11 @@ bool Game::getIsFinished() const
     return gameState.isFinished;
 }
 
+bool Game::getIsStarted() const
+{
+    return gameState.isStarted;
+}
+
 
 Card Game::getFloatingCard() const
 {
@@ -700,4 +704,9 @@ Card Game::getFloatingCard() const
 Game::Deck Game::getDeck() const
 {
     return gameState.deck;
+}
+
+Player *Game::getPlayer() const
+{
+
 }

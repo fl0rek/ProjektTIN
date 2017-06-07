@@ -9,6 +9,7 @@
 #include <string>
 #include <QDebug>
 #include <string>
+#include <fstream>
 
 /* TODO
  * check game->isValid()
@@ -53,24 +54,24 @@ void *gameApp(void *ptr)
 
 void *reader(void *)
 {
-    char message[256];
+    unsigned char message[256];
     while(1)
     {
         int x = read(STDIN_FILENO, message, 256);
-        std::string msg(message, x);
+//        std::string msg(message, x);
 
-        unsigned char data[msg.size()];
-        for(unsigned i = 0; i < msg.size(); ++i)
-            data[i] = static_cast<unsigned char>(msg[i]);
-        Tlv buffer = Tlv(data, msg.size());
+   //     unsigned char data[msg.size()];
+   //     for(unsigned i = 0; i < msg.size(); ++i)
+     //       data[i] = static_cast<unsigned char>(msg[i]);
+        Tlv buffer(message, x);
 
-        if(buffer.isTagPresent(tag::game_tags::terminate))
-            break;
-        if(!buffer.isTagPresent(tag::game_tags::invalid_step))
-            continue;
+   //     if(buffer.isTagPresent(tag::game_tags::terminate))
+     //       break;
+       // if(buffer.isTagPresent(tag::game_tags::invalid_step))
+       //     continue;
         g->acceptMessage(buffer);
-        if(user != 2)
-            v->update();
+        //if(user != 2)
+            //v->update();
     }
     pthread_exit(0);
 }
@@ -116,7 +117,6 @@ int main(int argc, char *argv[])
         pthreadCreateError(errno);
     if(pthread_create(&rd, NULL, reader, NULL))
         pthreadCreateError(errno);
-
     if(pthread_join(rd, NULL))
         pthreadJoinError(errno);
     if(pthread_join(game, NULL))
