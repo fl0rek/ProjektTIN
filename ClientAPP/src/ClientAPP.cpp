@@ -43,7 +43,6 @@ bool checkArgs(int argc, char ** argv)
 	return true;
 }
 
-//TODO add proper argument check
 int main(int argc, char ** argv)
 {
 	if(!checkArgs(argc, argv))
