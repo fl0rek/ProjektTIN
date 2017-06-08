@@ -1,3 +1,7 @@
+/*
+ * author Adrian Sobolewski
+ */
+
 #include "card.h"
 
 bool compare(Card c1, Card c2)

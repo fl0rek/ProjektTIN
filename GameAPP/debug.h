@@ -1,6 +1,10 @@
 #ifndef DEBUG_H
 #define DEBUG_H
 
+/*
+ * author Szymon Bezpalko
+ */
+
 #include <stdio.h>
 #include <errno.h>
 #include <string>

@@ -1,3 +1,7 @@
+/*
+ * author Adrian Sobolewski
+ */
+
 #include "view.h"
 
 #include <QScreen>

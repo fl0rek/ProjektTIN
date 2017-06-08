@@ -1,3 +1,7 @@
+/*
+ * author Adrian Sobolewski
+ */
+
 #include "cardview.h"
 
 #include <QDebug>

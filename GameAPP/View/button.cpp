@@ -1,3 +1,7 @@
+/*
+ * author Adrian Sobolewski
+ */
+
 #include "button.h"
 
 #include <QBrush>

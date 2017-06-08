@@ -1,3 +1,7 @@
+/*
+ * author Adrian Sobolewski
+ */
+
 #include "game.h"
 
 #include <iostream>
