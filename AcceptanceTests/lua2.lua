@@ -1,3 +1,4 @@
+--author Szymon Bezpalko
 trivial_proto = Proto("TIN","SIMPLE TIN PROTOCOL")
 
 local tagf_message = {
