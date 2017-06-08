@@ -1,3 +1,6 @@
+/*
+    @author Szymon Bezpalko
+*/
 #ifndef SERIAL_H
 
 #include <boost/archive/text_oarchive.hpp>
