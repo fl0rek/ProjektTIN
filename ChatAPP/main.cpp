@@ -1,3 +1,6 @@
+/*
+    @author Szymon Bezpalko
+*/
 #include "mainwindow.h"
 #include <QApplication>
 #include <stdlib.h>
